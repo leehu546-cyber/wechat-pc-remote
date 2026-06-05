@@ -7,8 +7,8 @@ param(
     [string]$Result = ""
 )
 
-$logFile = Join-Path $PSScriptRoot "..\docs\操作日志.md"
-$content = Get-Content $logFile -Raw -Encoding UTF8
+$logFile = (Resolve-Path (Join-Path $PSScriptRoot "..\docs\操作日志.md")).Path
+$content = [System.IO.File]::ReadAllText($logFile, [System.Text.Encoding]::UTF8)
 
 # 计算下一个序号
 $matches = [regex]::Matches($content, '(?m)^### (\d+) \|')
@@ -44,6 +44,6 @@ if ($content -match [regex]::Escape($marker)) {
     $content += $entry
 }
 
-Set-Content -Path $logFile -Value $content -Encoding UTF8 -NoNewline
+[System.IO.File]::WriteAllText($logFile, $content, [System.Text.UTF8Encoding]::new($false))
 Write-Host "已追加日志 #$($nextNum.ToString('00')): $Title" -ForegroundColor Green
 Write-Host "文件: $logFile"

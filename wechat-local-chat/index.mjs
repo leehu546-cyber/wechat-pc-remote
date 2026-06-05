@@ -3,7 +3,7 @@
  * 微信 ClawBot <-> 本地 Ollama 纯对话桥接
  * 微信发消息 -> qwen2.5:7b 回复 -> 发回微信
  */
-import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdirSync, existsSync, unlinkSync } from 'node:fs';
 import { join } from 'node:path';
 import { homedir } from 'node:os';
 import { login } from '../cli-in-wechat/dist/ilink/auth.js';
@@ -118,7 +118,27 @@ async function wechatLogin() {
     } else {
       console.log('请用微信扫描二维码:', qrContent);
     }
+    writeLoginHtml(qrContent);
   });
+}
+
+/** 生成浏览器扫码页，避免终端二维码看不清 */
+function writeLoginHtml(qrContent) {
+  mkdirSync(DATA_DIR, { recursive: true, mode: 0o700 });
+  const htmlPath = join(DATA_DIR, 'login.html');
+  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(qrContent)}`;
+  const html = `<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="utf-8"><title>微信 ClawBot 登录</title>
+<style>body{font-family:sans-serif;text-align:center;padding:2rem;background:#f5f5f5}
+.box{background:#fff;padding:2rem;border-radius:12px;display:inline-block;box-shadow:0 2px 12px #0001}
+img{border:1px solid #ddd;border-radius:8px}</style></head>
+<body><div class="box"><h2>微信 ClawBot 扫码登录</h2>
+<p>用手机微信扫描下方二维码，在 ClawBot 中确认</p>
+<img src="${qrUrl}" width="400" height="400" alt="QR"/>
+<p style="color:#666;font-size:14px">二维码约 5 分钟有效，过期后刷新本页或重启桥接</p>
+</div></body></html>`;
+  writeFileSync(htmlPath, html, 'utf-8');
+  console.log(`[提示] 浏览器扫码页: file:///${htmlPath.replace(/\\/g, '/')}`);
 }
 
 const processing = new Set();
@@ -138,6 +158,10 @@ async function main() {
     console.log('[..] 需要微信扫码登录...');
     credentials = await wechatLogin();
     saveCredentials(credentials);
+    const loginHtml = join(DATA_DIR, 'login.html');
+    if (existsSync(loginHtml)) {
+      try { unlinkSync(loginHtml); } catch { /* ignore */ }
+    }
     console.log('[ok] 微信登录成功');
   } else {
     console.log('[ok] 使用已保存的微信登录');
