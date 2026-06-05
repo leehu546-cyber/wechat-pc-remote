@@ -13,6 +13,9 @@
 - **工作目录**：`D:\cursor\61`。
 - **微信命令**：`/info`、`/cwd`、`/new`、`/help`；可用 `/claude`、`/codex` 切换 Agent。
 - **回复风格**：默认只发一条最终结果；处理期间显示微信「正在输入」，不推送「已收到/处理中」等进度文字（`progress.enabled: false`）。
+- **新消息打断**：`routing.cancel_previous: true`（需本地 `weclaw.exe` 含 `session/cancel` 补丁，见 `weclaw/` 子仓库）。
+- **本地快路由**：`你好`、`状态`、`打开/关闭 Edge` 不经过 Agent；发 `停止` 可取消当前任务。
+- **自愈**：`scripts/weclaw-watchdog.ps1`（`setup-always-on.ps1` 可注册每 5 分钟检查）。
 
 ## 快速开始
 
@@ -60,6 +63,10 @@ D:\cursor\61\scripts\restart-weclaw.ps1
 
 然后在微信里发送 `/new` 清空当前会话。日常使用建议一次只发一条任务，等待 2 分钟仍无回复再恢复。
 
+也可手动运行 `scripts/weclaw-watchdog.ps1` 检查并重启桥接。
+
+**注意：** `init-weclaw-opencode.ps1` 仅合并缺失配置项，不会覆盖你已改的 `progress` / `routing`。
+
 ## 构建 WeClaw
 
 如果本地还没有 `weclaw\weclaw.exe`：
@@ -71,7 +78,7 @@ cd weclaw
 go build -o weclaw.exe .
 ```
 
-`weclaw/` 是第三方克隆目录，已被 `.gitignore` 忽略。
+`weclaw/` 是本地 fork（含 `session/cancel` 等补丁），已被 `.gitignore` 忽略；修改后必须 `go build` 并 `restart-weclaw.ps1`。
 
 ## 项目结构
 

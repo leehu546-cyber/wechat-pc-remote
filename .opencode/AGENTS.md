@@ -14,8 +14,9 @@ You are controlled via WeChat. The user only sees your final text reply after al
 - All python/shell scripts MUST exit within 30 seconds.
 - NEVER use `while True` or infinite sleep to keep the browser alive.
 - Open URLs with PowerShell: `Start-Process msedge "https://..."` (probe real exe path first).
-- Selenium: click then `driver.quit()` immediately; do not block after quit.
-- For background browser: use `Start-Process` or `subprocess.Popen` and exit the script right away.
+- Selenium to keep browser open: `options.add_experimental_option("detach", True)`; do NOT call `driver.quit()` in `finally` (use `pass`).
+- Selenium to close browser after action: click then `driver.quit()` and exit within 30s.
+- Prefer `Start-Process msedge URL` over Selenium when no DOM click is needed.
 
 ## Browser tasks
 
