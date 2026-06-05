@@ -40,3 +40,15 @@ Update this section when the user states preferences or ongoing tasks. After con
 | in_progress | _(none — update when user starts a multi-step task)_ |
 
 When the user refers to "刚才" / "上一步" / "那个任务", check this table and recent tool outcomes before asking them to repeat.
+
+## Screenshot tool
+
+- User says \"截图\" or \"截屏\" → run \scripts\screenshot.ps1\
+- Script takes screenshot, sends image via WeChat, outputs WECHAT_OK: 截图已发送
+- Requires Python (for local HTTP server) and weclaw.exe
+
+## Commit & Log rules
+
+- After every code change: git add + git commit + \scripts\log-step.ps1\
+- Commit message format: 简洁中文说明改动
+- Log format: 类别为 \"修复\" / \"功能\" / \"优化\" / \"整理\"
