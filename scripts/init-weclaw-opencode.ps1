@@ -4,7 +4,7 @@ $ErrorActionPreference = "Stop"
 
 $projectRoot = Split-Path $PSScriptRoot -Parent
 $workDir = $projectRoot
-$model = "zhipuai/glm-4-flash"
+$model = "deepseek/deepseek-v4-flash"
 
 Write-Host "=== WeClaw + OpenCode init ===" -ForegroundColor Cyan
 
