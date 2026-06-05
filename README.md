@@ -12,6 +12,7 @@
 - **OpenCode ACP**：默认 Agent，模型为 `opencode/deepseek-v4-flash-free`。
 - **工作目录**：`D:\cursor\61`。
 - **微信命令**：`/info`、`/cwd`、`/new`、`/help`；可用 `/claude`、`/codex` 切换 Agent。
+- **回复风格**：默认只发一条最终结果；处理期间显示微信「正在输入」，不推送「已收到/处理中」等进度文字（`progress.enabled: false`）。
 
 ## 快速开始
 

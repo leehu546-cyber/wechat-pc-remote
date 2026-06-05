@@ -22,7 +22,7 @@ $workEscaped = $workDir -replace '\\', '\\'
 $prompt = @(
     'WeChat agent: always end with one concise Chinese reply (max 120 chars) after tools.',
     'Never finish with only tool calls. Say WECHAT_OK: <summary> when a PC task completes.',
-    'For long tasks, make short tool steps so WeChat can show progress promptly.',
+    'After any tool use, reply in one short Chinese sentence summarizing the outcome.',
     'Scripts must exit within 30s; NEVER while True. Prefer Start-Process msedge URL.',
     'Selenium: driver.quit() then exit. Read .opencode/AGENTS.md in project.'
 ) -join ' '
@@ -39,7 +39,7 @@ if (Test-Path $configPath) {
     }
     $cfg.default_agent = "opencode"
     $progress = [pscustomobject]@{
-        enabled         = $true
+        enabled         = $false
         interval_sec    = 30
         max_messages    = 5
         start_delay_sec = 2
@@ -61,7 +61,7 @@ if (Test-Path $configPath) {
 {
   "default_agent": "opencode",
   "progress": {
-    "enabled": true,
+    "enabled": false,
     "interval_sec": 30,
     "max_messages": 5,
     "start_delay_sec": 2
