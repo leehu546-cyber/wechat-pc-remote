@@ -4,7 +4,7 @@ $ErrorActionPreference = "Stop"
 
 $projectRoot = Split-Path $PSScriptRoot -Parent
 $workDir = $projectRoot
-$model = "opencode/deepseek-v4-flash-free"
+$model = "zhipuai/glm-4-flash"
 
 Write-Host "=== WeClaw + OpenCode init ===" -ForegroundColor Cyan
 
@@ -39,7 +39,16 @@ $defaultProgress = @{
 }
 $defaultRouting = @{
     simple_bypass   = $true
-    cancel_previous = $true
+    cancel_previous = $false
+}
+$defaultMemory = @{
+    everos = @{
+        enabled          = $true
+        base_url         = "http://127.0.0.1:8080"
+        top_k            = 5
+        method           = "keyword"
+        inject_max_chars = 1500
+    }
 }
 
 if (Test-Path $configPath) {
@@ -60,6 +69,16 @@ if (Test-Path $configPath) {
     }
     if (-not $cfg.routing) {
         $cfg | Add-Member -NotePropertyName routing -NotePropertyValue ([pscustomobject]$defaultRouting)
+    }
+    if (-not $cfg.memory) {
+        $cfg | Add-Member -NotePropertyName memory -NotePropertyValue ([pscustomobject]$defaultMemory)
+        Write-Host "Added memory.everos defaults (local http://127.0.0.1:8080)" -ForegroundColor Yellow
+    } elseif (-not $cfg.memory.everos) {
+        $cfg.memory | Add-Member -NotePropertyName everos -NotePropertyValue ([pscustomobject]$defaultMemory.everos)
+        Write-Host "Added memory.everos defaults" -ForegroundColor Yellow
+    } elseif ($cfg.memory.everos.method -eq "hybrid" -and $defaultMemory.everos.method -eq "keyword") {
+        $cfg.memory.everos.method = "keyword"
+        Write-Host "Downgraded memory.everos.method hybrid→keyword (local Ollama has no rerank)" -ForegroundColor Yellow
     }
     if (-not $cfg.agents.opencode) {
         $cfg.agents | Add-Member -NotePropertyName opencode -NotePropertyValue ([pscustomobject]@{
@@ -85,6 +104,7 @@ if (Test-Path $configPath) {
         default_agent = "opencode"
         progress      = $defaultProgress
         routing       = $defaultRouting
+        memory        = $defaultMemory
         agents        = [ordered]@{
             opencode = [ordered]@{
                 type          = "acp"
@@ -140,5 +160,6 @@ Write-Host "  model: $model"
 Write-Host "  cwd: $workDir"
 Write-Host "  progress: mode=$($defaultProgress.mode), enabled=$($defaultProgress.enabled), start_delay=$($defaultProgress.start_delay_sec)s"
 Write-Host "  routing.cancel_previous: $($defaultRouting.cancel_previous) (requires weclaw session/cancel patch)"
+Write-Host "  memory.everos: enabled=$($defaultMemory.everos.enabled), base=$($defaultMemory.everos.base_url)"
 Write-Host ""
 Write-Host "Next: weclaw start (scan QR on first run)" -ForegroundColor Cyan
