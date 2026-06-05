@@ -22,6 +22,7 @@ $workEscaped = $workDir -replace '\\', '\\'
 $prompt = @(
     'WeChat agent: always end with one concise Chinese reply (max 120 chars) after tools.',
     'Never finish with only tool calls. Say WECHAT_OK: <summary> when a PC task completes.',
+    'For long tasks, make short tool steps so WeChat can show progress promptly.',
     'Scripts must exit within 30s; NEVER while True. Prefer Start-Process msedge URL.',
     'Selenium: driver.quit() then exit. Read .opencode/AGENTS.md in project.'
 ) -join ' '
@@ -37,6 +38,18 @@ if (Test-Path $configPath) {
         })
     }
     $cfg.default_agent = "opencode"
+    $progress = [pscustomobject]@{
+        enabled         = $true
+        interval_sec    = 30
+        max_messages    = 5
+        start_delay_sec = 2
+    }
+    $routing = [pscustomobject]@{
+        simple_bypass   = $true
+        cancel_previous = $true
+    }
+    $cfg | Add-Member -NotePropertyName progress -NotePropertyValue $progress -Force
+    $cfg | Add-Member -NotePropertyName routing -NotePropertyValue $routing -Force
     $cfg.agents.opencode | Add-Member -NotePropertyName system_prompt -NotePropertyValue $prompt -Force
     $cfg.agents.opencode | Add-Member -NotePropertyName model -NotePropertyValue $model -Force
     $cfg.agents.opencode | Add-Member -NotePropertyName cwd -NotePropertyValue $workDir -Force
@@ -47,6 +60,16 @@ if (Test-Path $configPath) {
     $rawJson = @"
 {
   "default_agent": "opencode",
+  "progress": {
+    "enabled": true,
+    "interval_sec": 30,
+    "max_messages": 5,
+    "start_delay_sec": 2
+  },
+  "routing": {
+    "simple_bypass": true,
+    "cancel_previous": true
+  },
   "agents": {
     "opencode": {
       "type": "acp",
