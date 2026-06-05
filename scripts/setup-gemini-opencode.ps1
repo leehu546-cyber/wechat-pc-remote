@@ -13,7 +13,7 @@ New-Item -ItemType Directory -Path $ocDir -Force | Out-Null
 @'
 {
   "$schema": "https://opencode.ai/config.json",
-  "model": "opencode/deepseek-v4-flash-free",
+  "model": "ollama/qwen2.5:7b",
   "permission": {
     "edit": "allow",
     "bash": "allow",
@@ -36,14 +36,14 @@ New-Item -ItemType Directory -Path $ocDir -Force | Out-Null
 Write-Host @"
 
 Free cloud models (no API key):
-  opencode/deepseek-v4-flash-free
+  ollama/qwen2.5:7b
   opencode/minimax-m3-free
   opencode/mimo-v2.5-free
 
 WeClaw uses: opencode acp (no serve needed)
 
 Test:
-  opencode run "say OK" -m opencode/deepseek-v4-flash-free --dir D:\cursor\61
+  opencode run "say OK" -m ollama/qwen2.5:7b --dir D:\cursor\61
 "@ -ForegroundColor White
 
 Write-Host "`nDone." -ForegroundColor Green

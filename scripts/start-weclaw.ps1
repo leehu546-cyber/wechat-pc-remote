@@ -14,5 +14,8 @@ if (-not (Test-Path $configPath) -and (Test-Path $initScript)) {
 $stopLegacy = Join-Path $PSScriptRoot "stop-wechat-local-chat.ps1"
 if (Test-Path $stopLegacy) { & $stopLegacy | Out-Null }
 
+$everosScript = Join-Path $PSScriptRoot "start-everos.ps1"
+if (Test-Path $everosScript) { & $everosScript }
+
 Write-Host "Starting WeClaw (default: OpenCode)... Scan QR on first run." -ForegroundColor Cyan
 & $weclaw start

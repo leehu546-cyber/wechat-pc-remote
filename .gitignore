@@ -26,6 +26,13 @@ Thumbs.db
 # 环境变量与密钥
 .env
 .env.*
+.config/zhipu/
 
 # Debug session logs
 debug-*.log
+
+# 调试日志
+*.log
+
+# VS Code settings (已迁到全局)
+.vscode/

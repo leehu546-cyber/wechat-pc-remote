@@ -26,3 +26,17 @@ You are controlled via WeChat. The user only sees your final text reply after al
 ## When stuck
 
 - If a script would run long, split: run a short script, reply, then continue in a new turn.
+
+## Persistent user facts (read every turn)
+
+Update this section when the user states preferences or ongoing tasks. After context compaction, rely on this file plus EverOS-injected memory in the user message.
+
+| Key | Value |
+|-----|-------|
+| workspace | `D:\cursor\61` |
+| control_channel | WeChat via WeClaw + OpenCode ACP |
+| reply_style | One concise Chinese sentence, max 120 chars |
+| browser | Prefer `Start-Process msedge URL` |
+| in_progress | _(none — update when user starts a multi-step task)_ |
+
+When the user refers to "刚才" / "上一步" / "那个任务", check this table and recent tool outcomes before asking them to repeat.

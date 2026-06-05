@@ -12,6 +12,7 @@ param(
 $ErrorActionPreference = "Continue"
 $weclawLog = Join-Path $env:USERPROFILE ".weclaw\weclaw.log"
 $restartScript = Join-Path $PSScriptRoot "restart-weclaw.ps1"
+$everosScript = Join-Path $PSScriptRoot "start-everos.ps1"
 $watchdogLog = Join-Path $env:USERPROFILE ".weclaw\watchdog.log"
 
 function Write-Log($msg) {
@@ -43,15 +44,24 @@ function Get-ACPProcessIdFromLog {
     return $null
 }
 
-function Test-ProcessAlive($pid) {
-    if (-not $pid) { return $false }
-    return $null -ne (Get-Process -Id $pid -ErrorAction SilentlyContinue)
+function Test-ProcessAlive($processId) {
+    if (-not $processId) { return $false }
+    return $null -ne (Get-Process -Id $processId -ErrorAction SilentlyContinue)
 }
 
 function Get-RecentErrors {
     param([int]$WindowMinutes = $ErrorWindowMinutes)
     $cutoff = (Get-Date).AddMinutes(-$WindowMinutes)
-    $patterns = @('context canceled', 'agent returned empty response', 'default task canceled before reply')
+    $patterns = @(
+        'context canceled',
+        'agent returned empty response',
+        'default task canceled before reply',
+        'turn timed out',
+        '本轮处理超时',
+        'read loop ended',
+        'connection refused.*8080',
+        'everos.*search failed'
+    )
     $errors = @()
     foreach ($line in (Get-RecentLogLines)) {
         $ts = Parse-LogTimestamp $line
@@ -85,16 +95,43 @@ function Test-NoReplyStuck {
     return $true, "no reply for $([math]::Round($age, 1)) min since last received message"
 }
 
+function Test-EverOSHealthy {
+    try {
+        $r = Invoke-RestMethod "http://127.0.0.1:8080/health" -TimeoutSec 3
+        return ($r.status -eq 'ok')
+    } catch {
+        return $false
+    }
+}
+
+function Start-EverOSIfNeeded {
+    if (Test-EverOSHealthy) { return $true }
+    Write-Log "EverOS unhealthy, starting via start-everos.ps1..."
+    if (Test-Path $everosScript) {
+        & $everosScript | Out-Null
+        Start-Sleep -Seconds 3
+    }
+    return (Test-EverOSHealthy)
+}
+
 function Test-Healthy {
     $weclawOk = $null -ne (Get-Process -Name weclaw -ErrorAction SilentlyContinue)
+    $everosOk = Test-EverOSHealthy
     $acpPid = Get-ACPProcessIdFromLog
     $acpAlive = Test-ProcessAlive $acpPid
     $errors = Get-RecentErrors
     $stuck, $stuckReason = Test-NoReplyStuck
 
-    Write-Log "check: weclaw=$weclawOk acp_log_pid=$acpPid acp_alive=$acpAlive recent_errors=$($errors.Count) stuck=$stuck"
+    Write-Log "check: weclaw=$weclawOk everos=$everosOk acp_log_pid=$acpPid acp_alive=$acpAlive recent_errors=$($errors.Count) stuck=$stuck"
 
     if (-not $weclawOk) { return $false, 'weclaw not running' }
+    if (-not $everosOk) {
+        if (Start-EverOSIfNeeded) {
+            Write-Log "EverOS recovered without bridge restart"
+        } else {
+            return $false, 'EverOS not healthy on port 8080'
+        }
+    }
     if ($stuck) { return $false, $stuckReason }
     if ($errors.Count -ge $ErrorThreshold) {
         return $false, "$($errors.Count) errors in last ${ErrorWindowMinutes}m"
