@@ -19,9 +19,32 @@ New-Item -ItemType Directory -Path $weclawDir -Force | Out-Null
 
 $cmdEscaped = $opencodeCmd -replace '\\', '\\'
 $workEscaped = $workDir -replace '\\', '\\'
-$prompt = 'Reply in concise Chinese for WeChat (under 120 chars). Use PowerShell for PC tasks; probe real exe paths before Start-Process.'
+$prompt = @(
+    'WeChat agent: always end with one concise Chinese reply (max 120 chars) after tools.',
+    'Never finish with only tool calls. Say WECHAT_OK: <summary> when a PC task completes.',
+    'Scripts must exit within 30s; NEVER while True. Prefer Start-Process msedge URL.',
+    'Selenium: driver.quit() then exit. Read .opencode/AGENTS.md in project.'
+) -join ' '
 
-$rawJson = @"
+$utf8NoBom = New-Object System.Text.UTF8Encoding $false
+
+if (Test-Path $configPath) {
+    $cfg = Get-Content $configPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    if (-not $cfg.agents) { $cfg | Add-Member -NotePropertyName agents -NotePropertyValue (@{}) }
+    if (-not $cfg.agents.opencode) {
+        $cfg.agents | Add-Member -NotePropertyName opencode -NotePropertyValue ([pscustomobject]@{
+            type = "acp"; command = $opencodeCmd; args = @("acp"); cwd = $workDir; model = $model
+        })
+    }
+    $cfg.default_agent = "opencode"
+    $cfg.agents.opencode | Add-Member -NotePropertyName system_prompt -NotePropertyValue $prompt -Force
+    $cfg.agents.opencode | Add-Member -NotePropertyName model -NotePropertyValue $model -Force
+    $cfg.agents.opencode | Add-Member -NotePropertyName cwd -NotePropertyValue $workDir -Force
+    $json = $cfg | ConvertTo-Json -Depth 6
+    [System.IO.File]::WriteAllText($configPath, $json, $utf8NoBom)
+    Write-Host "Updated opencode system_prompt in $configPath" -ForegroundColor Green
+} else {
+    $rawJson = @"
 {
   "default_agent": "opencode",
   "agents": {
@@ -36,10 +59,9 @@ $rawJson = @"
   }
 }
 "@
-
-$utf8NoBom = New-Object System.Text.UTF8Encoding $false
-[System.IO.File]::WriteAllText($configPath, $rawJson.Trim(), $utf8NoBom)
-Write-Host "Wrote $configPath" -ForegroundColor Green
+    [System.IO.File]::WriteAllText($configPath, $rawJson.Trim(), $utf8NoBom)
+    Write-Host "Wrote $configPath" -ForegroundColor Green
+}
 
 # Migrate legacy wechat-local-chat credentials if WeClaw has none
 $accountsDir = Join-Path $weclawDir "accounts"
