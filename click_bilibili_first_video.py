@@ -1,4 +1,4 @@
-"""Open Bilibili in Edge, click first video, exit quickly (browser stays open via detach)."""
+"""Open Bilibili in Edge, click first video, exit quickly. Browser stays open via detach."""
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
@@ -18,4 +18,4 @@ try:
     driver.execute_script("arguments[0].click();", first_video)
     print("WECHAT_OK: 已打开哔哩哔哩并点击第一个视频，浏览器保持打开。")
 finally:
-    driver.quit()
+    pass  # detach 保持浏览器打开
