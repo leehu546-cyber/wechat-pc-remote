@@ -28,12 +28,34 @@ if (Test-Path $dist) {
     Write-Host "[--] cli-in-wechat not built" -ForegroundColor Red
 }
 
+$configPath = Join-Path $PSScriptRoot "..\wechat-local-chat\config.json"
+if (Test-Path $configPath) {
+    try {
+        $cfg = Get-Content $configPath -Raw -Encoding UTF8 | ConvertFrom-Json
+        $mode = if ($cfg.agentMode -ne $false) { "Agent (PowerShell)" } else { "Chat only" }
+        Write-Host "[ok] bridge mode: $mode | workDir: $($cfg.workDir)" -ForegroundColor Green
+    } catch { }
+}
+
+$pidFile = Join-Path $env:USERPROFILE ".wechat-local-chat\bridge.pid"
+if (Test-Path $pidFile) {
+    $bpid = Get-Content $pidFile -ErrorAction SilentlyContinue
+    if ($bpid -and (Get-Process -Id $bpid -ErrorAction SilentlyContinue)) {
+        Write-Host "[ok] bridge process pid=$bpid" -ForegroundColor Green
+    }
+}
+
+$cmdLog = Join-Path $env:USERPROFILE ".wechat-local-chat\logs\commands.log"
+if (Test-Path $cmdLog) {
+    $lines = (Get-Content $cmdLog -ErrorAction SilentlyContinue | Measure-Object -Line).Lines
+    Write-Host "[ok] command audit log: $lines lines" -ForegroundColor Green
+}
+
 $nodes = Get-Process -Name node -ErrorAction SilentlyContinue
-if ($nodes) {
-    $count = $nodes.Count
-    Write-Host "[ok] node process running ($count)" -ForegroundColor Green
-} else {
-    Write-Host "[..] bridge not running - run start-wechat-local-chat.ps1" -ForegroundColor Yellow
+if (-not (Test-Path $pidFile) -and $nodes) {
+    Write-Host "[ok] node process running ($($nodes.Count))" -ForegroundColor Green
+} elseif (-not (Test-Path $pidFile)) {
+    Write-Host "[..] bridge not running - run start-wechat-local-chat-background.ps1" -ForegroundColor Yellow
 }
 
 Write-Host ""

@@ -1,13 +1,15 @@
 #!/usr/bin/env node
 /**
- * 微信 ClawBot <-> 本地 Ollama 纯对话桥接
- * 微信发消息 -> qwen2.5:7b 回复 -> 发回微信
+ * 微信 ClawBot <-> 本地 Ollama
+ * - Agent 模式：通过 PowerShell 控制电脑
+ * - Chat 模式：纯对话
  */
 import { readFileSync, writeFileSync, mkdirSync, existsSync, unlinkSync } from 'node:fs';
 import { join } from 'node:path';
 import { homedir } from 'node:os';
 import { login } from '../cli-in-wechat/dist/ilink/auth.js';
 import { ILinkClient } from '../cli-in-wechat/dist/ilink/client.js';
+import { runAgent, getAgentSystemPrompt } from './agent.js';
 
 const DATA_DIR = join(homedir(), '.wechat-local-chat');
 const CREDENTIALS_FILE = join(DATA_DIR, 'credentials.json');
@@ -17,7 +19,15 @@ const DEFAULT_CONFIG = {
   ollamaUrl: 'http://127.0.0.1:11434',
   model: 'qwen2.5:7b',
   systemPrompt: '你是一个简洁友好的中文助手。回答要简短清楚，适合在手机微信里阅读。',
+  agentMode: true,
+  agentSystemPrompt: null,
   maxHistory: 20,
+  maxAgentTurns: 8,
+  commandTimeoutSec: 120,
+  maxOutputChars: 4000,
+  workDir: 'D:\\cursor\\61',
+  notifyEachCommand: true,
+  auditLog: true,
 };
 
 function loadConfig() {
@@ -54,16 +64,28 @@ async function checkOllama(config) {
   console.log(`[ok] Ollama 已连接，使用模型: ${config.model}`);
 }
 
-/** 每个微信用户独立对话历史 */
+/** @type {Map<string, object[]>} */
 const histories = new Map();
+/** @type {Map<string, 'agent'|'chat'>} */
+const userModes = new Map();
 
-function getHistory(userId, config) {
-  if (!histories.has(userId)) {
-    histories.set(userId, [
-      { role: 'system', content: config.systemPrompt },
-    ]);
-  }
-  return histories.get(userId);
+function getMode(uid, config) {
+  return userModes.get(uid) ?? (config.agentMode !== false ? 'agent' : 'chat');
+}
+
+function initHistory(uid, config, mode) {
+  const system =
+    mode === 'agent'
+      ? getAgentSystemPrompt(config)
+      : config.systemPrompt;
+  histories.set(uid, [{ role: 'system', content: system }]);
+  userModes.set(uid, mode);
+}
+
+function getHistory(uid, config) {
+  const mode = getMode(uid, config);
+  if (!histories.has(uid)) initHistory(uid, config, mode);
+  return histories.get(uid);
 }
 
 function trimHistory(messages, maxHistory) {
@@ -73,8 +95,8 @@ function trimHistory(messages, maxHistory) {
   return [...system, ...kept];
 }
 
-async function chatWithOllama(userId, userText, config) {
-  const messages = getHistory(userId, config);
+async function chatWithOllama(uid, userText, config) {
+  const messages = getHistory(uid, config);
   messages.push({ role: 'user', content: userText });
   const payload = {
     model: config.model,
@@ -106,23 +128,18 @@ async function wechatLogin() {
     const qt = mod.default || mod;
     qrGenerate = qt.generate?.bind(qt) ?? null;
   } catch {
-    // cli-in-wechat node_modules
     const mod = await import('../cli-in-wechat/node_modules/qrcode-terminal/lib/main.js');
     const qt = mod.default || mod;
     qrGenerate = qt.generate?.bind(qt) ?? null;
   }
 
   return login((qrContent) => {
-    if (qrGenerate) {
-      qrGenerate(qrContent, { small: true });
-    } else {
-      console.log('请用微信扫描二维码:', qrContent);
-    }
+    if (qrGenerate) qrGenerate(qrContent, { small: true });
+    else console.log('请用微信扫描二维码:', qrContent);
     writeLoginHtml(qrContent);
   });
 }
 
-/** 生成浏览器扫码页，避免终端二维码看不清 */
 function writeLoginHtml(qrContent) {
   mkdirSync(DATA_DIR, { recursive: true, mode: 0o700 });
   const htmlPath = join(DATA_DIR, 'login.html');
@@ -135,10 +152,29 @@ img{border:1px solid #ddd;border-radius:8px}</style></head>
 <body><div class="box"><h2>微信 ClawBot 扫码登录</h2>
 <p>用手机微信扫描下方二维码，在 ClawBot 中确认</p>
 <img src="${qrUrl}" width="400" height="400" alt="QR"/>
-<p style="color:#666;font-size:14px">二维码约 5 分钟有效，过期后刷新本页或重启桥接</p>
 </div></body></html>`;
   writeFileSync(htmlPath, html, 'utf-8');
   console.log(`[提示] 浏览器扫码页: file:///${htmlPath.replace(/\\/g, '/')}`);
+}
+
+function helpText(mode) {
+  if (mode === 'agent') {
+    return `Agent 模式（终端控制电脑）
+
+直接发指令，例如：
+- 列出 D 盘根目录
+- 在当前目录创建 test.txt
+
+/chat — 切换纯聊天
+/agent — 当前模式
+/new — 清空上下文
+/help — 本帮助`;
+  }
+  return `Chat 模式（纯对话，不执行命令）
+
+/agent — 切换终端控制模式
+/new — 清空上下文
+/help — 本帮助`;
 }
 
 const processing = new Set();
@@ -147,8 +183,9 @@ async function main() {
   const config = loadConfig();
 
   console.log('');
-  console.log('  微信 ClawBot  <->  本地 Ollama 对话');
-  console.log(`  模型: ${config.model}`);
+  console.log('  微信 ClawBot  <->  本地 Ollama');
+  console.log(`  模型: ${config.model} | 默认: ${config.agentMode !== false ? 'Agent' : 'Chat'}`);
+  console.log(`  工作目录: ${config.workDir}`);
   console.log('');
 
   await checkOllama(config);
@@ -174,29 +211,49 @@ async function main() {
     const userText = text.trim();
 
     if (!userText) return;
+
     if (userText === '/new' || userText === '/重置') {
       histories.delete(uid);
+      userModes.delete(uid);
       await ilink.sendText(uid, '已清空对话，我们可以重新开始。');
       return;
     }
+    if (userText === '/chat') {
+      initHistory(uid, config, 'chat');
+      await ilink.sendText(uid, '已切换为 Chat 模式（纯对话，不执行命令）。');
+      return;
+    }
+    if (userText === '/agent') {
+      initHistory(uid, config, 'agent');
+      await ilink.sendText(uid, '已切换为 Agent 模式（可通过 PowerShell 控制电脑）。');
+      return;
+    }
     if (userText === '/help' || userText === '/帮助') {
-      await ilink.sendText(
-        uid,
-        '本地对话模式\n\n直接发文字即可聊天\n/new 或 /重置 — 清空上下文\n/help — 本帮助',
-      );
+      await ilink.sendText(uid, helpText(getMode(uid, config)));
       return;
     }
     if (processing.has(uid)) {
-      await ilink.sendText(uid, '上一条还在想，请稍等…');
+      await ilink.sendText(uid, '上一条还在处理，请稍等…');
       return;
     }
 
     processing.add(uid);
     const stopTyping = await ilink.startTyping(uid);
+    const mode = getMode(uid, config);
 
     try {
-      console.log(`[收] ${userText.substring(0, 80)}`);
-      const reply = await chatWithOllama(uid, userText, config);
+      console.log(`[收][${mode}] ${userText.substring(0, 80)}`);
+      let reply;
+
+      if (mode === 'agent') {
+        reply = await runAgent(uid, userText, config, {
+          getMessages: () => getHistory(uid, config),
+          onProgress: (t) => ilink.sendText(uid, t, { streamType: 'intermediate' }),
+        });
+      } else {
+        reply = await chatWithOllama(uid, userText, config);
+      }
+
       console.log(`[回] ${reply.substring(0, 80)}${reply.length > 80 ? '…' : ''}`);
       await ilink.sendText(uid, reply);
     } catch (err) {
