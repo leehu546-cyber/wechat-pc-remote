@@ -1,0 +1,28 @@
+# 第三方克隆仓库（自行 git clone，见 README）
+cli-in-wechat/
+weclaw/
+WeClaude/
+
+# Node
+node_modules/
+npm-debug.log*
+
+# 构建产物
+*.exe
+weclaw/weclaw.exe
+
+# 本地运行时数据（含微信 token，勿提交）
+.wx-ai-bridge/
+.wechat-local-chat/
+
+# 系统与编辑器
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# 环境变量与密钥
+.env
+.env.*

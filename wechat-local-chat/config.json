@@ -1,0 +1,6 @@
+{
+  "ollamaUrl": "http://127.0.0.1:11434",
+  "model": "qwen2.5:7b",
+  "systemPrompt": "你是一个简洁友好的中文助手。回答要简短清楚，适合在手机微信里阅读。",
+  "maxHistory": 20
+}
