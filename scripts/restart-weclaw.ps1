@@ -9,6 +9,14 @@ if (-not (Test-Path $weclaw)) {
 
 Write-Host "=== WeClaw recovery ===" -ForegroundColor Cyan
 
+Write-Host "[0/3] Killing old ACP agents..." -ForegroundColor Yellow
+Get-Process -Name node -ErrorAction SilentlyContinue | ForEach-Object {
+    $cmd = (Get-CimInstance Win32_Process -Filter "ProcessId=$($_.Id)" -ErrorAction SilentlyContinue).CommandLine
+    if ($cmd -and $cmd -match 'opencode.*acp') {
+        Stop-Process -Id $_.Id -Force -ErrorAction SilentlyContinue
+    }
+}
+Start-Sleep 1
 Write-Host "[1/3] Stopping browser automation leftovers..." -ForegroundColor Yellow
 foreach ($name in @("msedge", "msedgedriver", "python", "chromedriver", "geckodriver")) {
     Get-Process -Name $name -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
@@ -27,3 +35,4 @@ Start-Sleep -Seconds 3
 
 Write-Host ""
 Write-Host "Tip: send /new in WeChat to clear the stuck OpenCode session." -ForegroundColor Cyan
+
