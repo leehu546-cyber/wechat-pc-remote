@@ -8,6 +8,10 @@
   "commandTimeoutSec": 120,
   "maxOutputChars": 4000,
   "workDir": "D:\\cursor\\61",
-  "notifyEachCommand": true,
+  "notifyEachCommand": false,
+  "notifyOnStart": true,
+  "startMessage": "处理中…",
+  "resultOnly": true,
+  "maxReplyChars": 120,
   "auditLog": true
 }

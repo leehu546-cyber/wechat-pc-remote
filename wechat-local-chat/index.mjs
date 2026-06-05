@@ -9,7 +9,7 @@ import { join } from 'node:path';
 import { homedir } from 'node:os';
 import { login } from '../cli-in-wechat/dist/ilink/auth.js';
 import { ILinkClient } from '../cli-in-wechat/dist/ilink/client.js';
-import { runAgent, getAgentSystemPrompt } from './agent.js';
+import { runAgent, getAgentSystemPrompt, truncateReply } from './agent.js';
 
 const DATA_DIR = join(homedir(), '.wechat-local-chat');
 const CREDENTIALS_FILE = join(DATA_DIR, 'credentials.json');
@@ -26,7 +26,11 @@ const DEFAULT_CONFIG = {
   commandTimeoutSec: 120,
   maxOutputChars: 4000,
   workDir: 'D:\\cursor\\61',
-  notifyEachCommand: true,
+  notifyEachCommand: false,
+  notifyOnStart: true,
+  startMessage: '处理中…',
+  resultOnly: true,
+  maxReplyChars: 120,
   auditLog: true,
 };
 
@@ -159,13 +163,12 @@ img{border:1px solid #ddd;border-radius:8px}</style></head>
 
 function helpText(mode) {
   if (mode === 'agent') {
-    return `Agent 模式（终端控制电脑）
+    return `Agent 模式（只要结果）
 
-直接发指令，例如：
-- 列出 D 盘根目录
-- 在当前目录创建 test.txt
+发指令即可，例如：关闭 Chrome、列出 D 盘目录
+会先回复「处理中…」，完成后一行结果（不显示命令）
 
-/chat — 切换纯聊天
+/chat — 纯聊天
 /agent — 当前模式
 /new — 清空上下文
 /help — 本帮助`;
@@ -246,12 +249,21 @@ async function main() {
       let reply;
 
       if (mode === 'agent') {
+        if (config.notifyOnStart !== false) {
+          await ilink.sendText(uid, config.startMessage || '处理中…', {
+            streamType: 'intermediate',
+          });
+        }
         reply = await runAgent(uid, userText, config, {
           getMessages: () => getHistory(uid, config),
-          onProgress: (t) => ilink.sendText(uid, t, { streamType: 'intermediate' }),
+          onProgress: config.notifyEachCommand
+            ? (t) => ilink.sendText(uid, t, { streamType: 'intermediate' })
+            : undefined,
         });
+        reply = truncateReply(reply, config.maxReplyChars ?? 120);
       } else {
         reply = await chatWithOllama(uid, userText, config);
+        reply = truncateReply(reply, config.maxReplyChars ?? 500);
       }
 
       console.log(`[回] ${reply.substring(0, 80)}${reply.length > 80 ? '…' : ''}`);
