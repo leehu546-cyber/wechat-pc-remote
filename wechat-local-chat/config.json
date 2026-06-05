@@ -13,5 +13,21 @@
   "startMessage": "处理中…",
   "resultOnly": true,
   "maxReplyChars": 120,
-  "auditLog": true
+  "auditLog": true,
+  "taskClassification": {
+    "simpleThreshold": 3,
+    "complexThreshold": 3,
+    "ambiguousMargin": 1,
+    "stripPrefixes": ["给我", "帮我", "请", "麻烦", "能不能", "可以"]
+  },
+  "cliRouting": {
+    "cliTimeoutSec": 300,
+    "opencode": {
+      "model": "opencode/deepseek-v4-flash-free",
+      "serveUrl": "http://127.0.0.1:4096",
+      "servePort": 4096,
+      "requireServe": true
+    }
+  },
+  "serveWatchdogSec": 300
 }

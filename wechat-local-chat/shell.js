@@ -71,6 +71,7 @@ function appendAudit(command, result) {
     mkdirSync(LOG_DIR, { recursive: true });
     const line = JSON.stringify({
       ts: new Date().toISOString(),
+      routeTarget: 'ollama',
       command,
       exitCode: result.exitCode,
       outputPreview: result.output.slice(0, 200),
@@ -79,4 +80,22 @@ function appendAudit(command, result) {
   } catch {
     /* ignore */
   }
+}
+
+const CHROME_CANDIDATES = [
+  'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
+  'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
+];
+
+/** @returns {Promise<string|null>} */
+export async function detectChromePath() {
+  for (const p of CHROME_CANDIDATES) {
+    const r = await execPowerShell(`Test-Path '${p}'`, {
+      auditLog: false,
+      timeoutSec: 15,
+      maxOutputChars: 32,
+    });
+    if (r.exitCode === 0 && /True/i.test(r.output)) return p;
+  }
+  return null;
 }

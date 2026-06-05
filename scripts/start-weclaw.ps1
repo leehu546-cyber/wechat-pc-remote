@@ -1,8 +1,18 @@
-# 启动 weclaw 微信 ClawBot 桥接（首次运行需微信扫码）
+# Start WeClaw WeChat bridge (default agent: OpenCode ACP)
 $weclaw = Join-Path $PSScriptRoot "..\weclaw\weclaw.exe"
 if (-not (Test-Path $weclaw)) {
-    Write-Error "未找到 weclaw.exe，请先在 weclaw 目录执行: go build -o weclaw.exe ."
+    Write-Error "weclaw.exe not found. Build: cd weclaw && go build -o weclaw.exe ."
     exit 1
 }
-Write-Host "启动 weclaw... 首次运行请用微信 ClawBot 扫码登录" -ForegroundColor Cyan
+
+$initScript = Join-Path $PSScriptRoot "init-weclaw-opencode.ps1"
+$configPath = Join-Path $env:USERPROFILE ".weclaw\config.json"
+if (-not (Test-Path $configPath) -and (Test-Path $initScript)) {
+    & $initScript
+}
+
+$stopLegacy = Join-Path $PSScriptRoot "stop-wechat-local-chat.ps1"
+if (Test-Path $stopLegacy) { & $stopLegacy | Out-Null }
+
+Write-Host "Starting WeClaw (default: OpenCode)... Scan QR on first run." -ForegroundColor Cyan
 & $weclaw start

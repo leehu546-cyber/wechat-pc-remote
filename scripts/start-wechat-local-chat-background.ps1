@@ -1,6 +1,7 @@
 # Run WeChat-Ollama bridge in background (survives without open terminal)
 $bridge = Join-Path $PSScriptRoot "..\wechat-local-chat\index.mjs"
 $cliDist = Join-Path $PSScriptRoot "..\cli-in-wechat\dist\index.js"
+$serveScript = Join-Path $PSScriptRoot "start-opencode-serve.ps1"
 $logDir = Join-Path $env:USERPROFILE ".wechat-local-chat\logs"
 $logFile = Join-Path $logDir "bridge.log"
 $pidFile = Join-Path $env:USERPROFILE ".wechat-local-chat\bridge.pid"
@@ -16,6 +17,11 @@ if (Test-Path $pidFile) {
 }
 
 New-Item -ItemType Directory -Path $logDir -Force | Out-Null
+
+# Ensure OpenCode serve is online first
+if (Test-Path $serveScript) {
+    & $serveScript | Out-Null
+}
 
 # Wait for Ollama (up to 2 min after boot)
 for ($i = 0; $i -lt 24; $i++) {

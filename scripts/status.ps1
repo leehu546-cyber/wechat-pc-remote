@@ -1,61 +1,65 @@
-# Check WeChat local chat bridge status
+# Check WeClaw + OpenCode bridge status
 Write-Host ""
-Write-Host "=== WeChat Local Chat Status ===" -ForegroundColor Cyan
+Write-Host "=== WeClaw + OpenCode Status ===" -ForegroundColor Cyan
+
+$weclaw = Join-Path $PSScriptRoot "..\weclaw\weclaw.exe"
+$weclawProc = Get-Process -Name weclaw -ErrorAction SilentlyContinue
+if ($weclawProc) {
+    Write-Host "[ok] weclaw running pid=$($weclawProc.Id -join ',')" -ForegroundColor Green
+} elseif (Test-Path $weclaw) {
+    & $weclaw status 2>&1
+} else {
+    Write-Host "[--] weclaw.exe not found" -ForegroundColor Red
+}
 
 try {
-    $tags = Invoke-RestMethod -Uri "http://127.0.0.1:11434/api/tags" -TimeoutSec 3
-    $models = ($tags.models | ForEach-Object { $_.name }) -join ", "
-    Write-Host "[ok] Ollama running | models: $models" -ForegroundColor Green
+    $ocVer = opencode --version 2>&1
+    Write-Host "[ok] OpenCode $ocVer" -ForegroundColor Green
 } catch {
-    Write-Host "[--] Ollama not running" -ForegroundColor Red
+    Write-Host "[--] OpenCode not installed" -ForegroundColor Red
 }
 
-$cred = Join-Path $env:USERPROFILE ".wechat-local-chat\credentials.json"
-if (Test-Path $cred) {
-    Write-Host "[ok] WeChat logged in" -ForegroundColor Green
-} else {
-    Write-Host "[..] WeChat not logged in - scan QR" -ForegroundColor Yellow
-    $loginHtml = Join-Path $env:USERPROFILE ".wechat-local-chat\login.html"
-    if (Test-Path $loginHtml) {
-        Write-Host "     QR page: $loginHtml" -ForegroundColor DarkGray
-    }
-}
-
-$dist = Join-Path $PSScriptRoot "..\cli-in-wechat\dist\index.js"
-if (Test-Path $dist) {
-    Write-Host "[ok] cli-in-wechat built" -ForegroundColor Green
-} else {
-    Write-Host "[--] cli-in-wechat not built" -ForegroundColor Red
-}
-
-$configPath = Join-Path $PSScriptRoot "..\wechat-local-chat\config.json"
-if (Test-Path $configPath) {
+$weclawConfig = Join-Path $env:USERPROFILE ".weclaw\config.json"
+if (Test-Path $weclawConfig) {
     try {
-        $cfg = Get-Content $configPath -Raw -Encoding UTF8 | ConvertFrom-Json
-        $mode = if ($cfg.agentMode -ne $false) { "Agent (PowerShell)" } else { "Chat only" }
-        Write-Host "[ok] bridge mode: $mode | workDir: $($cfg.workDir)" -ForegroundColor Green
-    } catch { }
+        $wc = Get-Content $weclawConfig -Raw -Encoding UTF8 | ConvertFrom-Json
+        $agent = $wc.default_agent
+        $model = $wc.agents.opencode.model
+        $cwd = $wc.agents.opencode.cwd
+        Write-Host "[ok] default_agent: $agent | model: $model | cwd: $cwd" -ForegroundColor Green
+    } catch {
+        Write-Host "[..] weclaw config present but unreadable" -ForegroundColor Yellow
+    }
+} else {
+    Write-Host "[..] weclaw not configured - run init-weclaw-opencode.ps1" -ForegroundColor Yellow
 }
 
-$pidFile = Join-Path $env:USERPROFILE ".wechat-local-chat\bridge.pid"
-if (Test-Path $pidFile) {
-    $bpid = Get-Content $pidFile -ErrorAction SilentlyContinue
-    if ($bpid -and (Get-Process -Id $bpid -ErrorAction SilentlyContinue)) {
-        Write-Host "[ok] bridge process pid=$bpid" -ForegroundColor Green
+$accountsDir = Join-Path $env:USERPROFILE ".weclaw\accounts"
+$ilinkCreds = Get-ChildItem -Path $accountsDir -Filter "*.json" -ErrorAction SilentlyContinue
+if ($ilinkCreds) {
+    Write-Host "[ok] WeChat logged in ($($ilinkCreds.Count) account(s))" -ForegroundColor Green
+} else {
+    $legacyCred = Join-Path $env:USERPROFILE ".wechat-local-chat\credentials.json"
+    if (Test-Path $legacyCred) {
+        Write-Host "[..] Legacy wechat-local-chat credentials exist; weclaw needs its own login" -ForegroundColor Yellow
+    } else {
+        Write-Host "[..] WeChat not logged in - run weclaw login or weclaw start" -ForegroundColor Yellow
     }
 }
 
-$cmdLog = Join-Path $env:USERPROFILE ".wechat-local-chat\logs\commands.log"
-if (Test-Path $cmdLog) {
-    $lines = (Get-Content $cmdLog -ErrorAction SilentlyContinue | Measure-Object -Line).Lines
-    Write-Host "[ok] command audit log: $lines lines" -ForegroundColor Green
+$weclawLog = Join-Path $env:USERPROFILE ".weclaw\weclaw.log"
+if (Test-Path $weclawLog) {
+    $logSize = (Get-Item $weclawLog).Length
+    Write-Host "[ok] weclaw log: $weclawLog ($logSize bytes)" -ForegroundColor Green
 }
 
-$nodes = Get-Process -Name node -ErrorAction SilentlyContinue
-if (-not (Test-Path $pidFile) -and $nodes) {
-    Write-Host "[ok] node process running ($($nodes.Count))" -ForegroundColor Green
-} elseif (-not (Test-Path $pidFile)) {
-    Write-Host "[..] bridge not running - run start-wechat-local-chat-background.ps1" -ForegroundColor Yellow
+# Legacy wechat-local-chat (optional)
+$legacyPid = Join-Path $env:USERPROFILE ".wechat-local-chat\bridge.pid"
+if (Test-Path $legacyPid) {
+    $bpid = Get-Content $legacyPid -ErrorAction SilentlyContinue
+    if ($bpid -and (Get-Process -Id $bpid -ErrorAction SilentlyContinue)) {
+        Write-Host "[!!] Legacy wechat-local-chat still running pid=$bpid - run stop-wechat-local-chat.ps1" -ForegroundColor Red
+    }
 }
 
 Write-Host ""
