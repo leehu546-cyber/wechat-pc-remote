@@ -31,10 +31,11 @@ $prompt = @(
 $utf8NoBom = New-Object System.Text.UTF8Encoding $false
 
 $defaultProgress = @{
-    enabled         = $false
+    enabled         = $true
+    mode            = "minimal"
     interval_sec    = 30
-    max_messages    = 5
-    start_delay_sec = 2
+    max_messages    = 3
+    start_delay_sec = 30
 }
 $defaultRouting = @{
     simple_bypass   = $true
@@ -47,6 +48,15 @@ if (Test-Path $configPath) {
     if (-not $cfg.default_agent) { $cfg.default_agent = "opencode" }
     if (-not $cfg.progress) {
         $cfg | Add-Member -NotePropertyName progress -NotePropertyValue ([pscustomobject]$defaultProgress)
+    } elseif (-not $cfg.progress.mode) {
+        $cfg.progress | Add-Member -NotePropertyName mode -NotePropertyValue "minimal" -Force
+        $cfg.progress | Add-Member -NotePropertyName enabled -NotePropertyValue $true -Force
+        $cfg.progress | Add-Member -NotePropertyName start_delay_sec -NotePropertyValue 30 -Force
+        $cfg.progress | Add-Member -NotePropertyName interval_sec -NotePropertyValue 30 -Force
+        if (-not $cfg.progress.max_messages) {
+            $cfg.progress | Add-Member -NotePropertyName max_messages -NotePropertyValue 3 -Force
+        }
+        Write-Host "Upgraded progress to mode=minimal (30s delay)" -ForegroundColor Yellow
     }
     if (-not $cfg.routing) {
         $cfg | Add-Member -NotePropertyName routing -NotePropertyValue ([pscustomobject]$defaultRouting)
@@ -128,7 +138,7 @@ if (Test-Path $accountsDir) {
 Write-Host "  default_agent: opencode"
 Write-Host "  model: $model"
 Write-Host "  cwd: $workDir"
-Write-Host "  progress.enabled: $($defaultProgress.enabled) (only set on new config)"
+Write-Host "  progress: mode=$($defaultProgress.mode), enabled=$($defaultProgress.enabled), start_delay=$($defaultProgress.start_delay_sec)s"
 Write-Host "  routing.cancel_previous: $($defaultRouting.cancel_previous) (requires weclaw session/cancel patch)"
 Write-Host ""
 Write-Host "Next: weclaw start (scan QR on first run)" -ForegroundColor Cyan

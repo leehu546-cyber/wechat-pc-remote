@@ -12,7 +12,7 @@
 - **OpenCode ACP**：默认 Agent，模型为 `opencode/deepseek-v4-flash-free`。
 - **工作目录**：`D:\cursor\61`。
 - **微信命令**：`/info`、`/cwd`、`/new`、`/help`；可用 `/claude`、`/codex` 切换 Agent。
-- **回复风格**：默认只发一条最终结果；处理期间显示微信「正在输入」，不推送「已收到/处理中」等进度文字（`progress.enabled: false`）。
+- **回复风格**：快任务只发一条最终结果 +「正在输入」；长任务超过 30 秒会发 `处理中：…`（`progress.mode: minimal`，每 30 秒最多一条），不发 `已收到，开始处理`。
 - **新消息打断**：`routing.cancel_previous: true`（需本地 `weclaw.exe` 含 `session/cancel` 补丁，见 `weclaw/` 子仓库）。
 - **本地快路由**：`你好`、`状态`、`打开/关闭 Edge` 不经过 Agent；发 `停止` 可取消当前任务。
 - **自愈**：`scripts/weclaw-watchdog.ps1`（`setup-always-on.ps1` 可注册每 5 分钟检查）。
