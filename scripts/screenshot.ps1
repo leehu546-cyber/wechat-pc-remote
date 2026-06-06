@@ -6,7 +6,7 @@ param(
 $ErrorActionPreference = "Continue"
 $weclaw = "D:\cursor\61\weclaw\weclaw.exe"
 $user = "o9cq801Ug93dPoIRZhHYx0dqwYuA@im.wechat"
-$dir = Join-Path $env:USERPROFILE ".wechat-local-chat\screenshots"
+$dir = Join-Path $env:TEMP "wechat_screenshots"
 $wakeScript = Join-Path $PSScriptRoot "wake-screen.ps1"
 
 if (-not (Test-Path $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }

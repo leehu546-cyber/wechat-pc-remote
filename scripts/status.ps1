@@ -4,6 +4,7 @@ Write-Host "=== WeClaw + OpenCode Status ===" -ForegroundColor Cyan
 
 $weclaw = Join-Path $PSScriptRoot "..\weclaw\weclaw.exe"
 . (Join-Path $PSScriptRoot "keep-awake-util.ps1")
+. (Join-Path $PSScriptRoot "wake-server-util.ps1")
 $keepPids = Get-KeepAwakeDaemonPids
 if ($keepPids.Count -eq 1) {
     Write-Host "[ok] keep-awake pid=$($keepPids[0])" -ForegroundColor Green
@@ -11,6 +12,19 @@ if ($keepPids.Count -eq 1) {
     Write-Host "[!!] keep-awake duplicate pids=$($keepPids -join ',')" -ForegroundColor Red
 } else {
     Write-Host "[--] keep-awake not running" -ForegroundColor Yellow
+}
+
+$wakePids = Get-WakeServerDaemonPids
+$wakeCfg = Read-WakeServerConfig
+if ($wakePids.Count -eq 1) {
+    Write-Host "[ok] wake-server pid=$($wakePids[0]) port=$($wakeCfg.port)" -ForegroundColor Green
+    foreach ($u in (Get-WakeMobileUrls -Config $wakeCfg)) {
+        Write-Host "     $u" -ForegroundColor DarkGray
+    }
+} elseif ($wakePids.Count -gt 1) {
+    Write-Host "[!!] wake-server duplicate pids=$($wakePids -join ',')" -ForegroundColor Red
+} else {
+    Write-Host "[--] wake-server not running — run setup-wake-mobile.ps1" -ForegroundColor Yellow
 }
 
 $weclawProc = Get-Process -Name weclaw -ErrorAction SilentlyContinue

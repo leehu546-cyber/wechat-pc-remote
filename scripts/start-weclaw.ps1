@@ -5,6 +5,13 @@ if ($keepAwake) {
     Write-Host "keep-awake daemon pid=$($keepAwake.Id)" -ForegroundColor Green
 }
 
+. (Join-Path $PSScriptRoot "wake-server-util.ps1")
+$wakeServer = Start-WakeServerDaemon -ScriptsRoot $PSScriptRoot
+if ($wakeServer) {
+    $wakePort = (Read-WakeServerConfig).port
+    Write-Host "wake-server pid=$($wakeServer.Id) port=$wakePort (mobile亮屏)" -ForegroundColor Green
+}
+
 # Start WeClaw WeChat bridge (default agent: OpenCode ACP)
 $weclaw = Join-Path $PSScriptRoot "..\weclaw\weclaw.exe"
 if (-not (Test-Path $weclaw)) {

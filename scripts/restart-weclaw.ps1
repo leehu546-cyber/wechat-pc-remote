@@ -24,7 +24,9 @@ foreach ($name in @("msedge", "msedgedriver", "python", "chromedriver", "geckodr
 
 Write-Host "[2/3] Restarting WeClaw..." -ForegroundColor Yellow
 . (Join-Path $PSScriptRoot "keep-awake-util.ps1")
+. (Join-Path $PSScriptRoot "wake-server-util.ps1")
 Stop-KeepAwakeDaemon
+Stop-WakeServerDaemon
 & $weclaw stop 2>&1 | Out-Null
 Start-Sleep -Seconds 2
 Get-Process -Name weclaw -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue

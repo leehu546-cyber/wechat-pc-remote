@@ -1,4 +1,5 @@
-# keep-awake.ps1 - bridge lifecycle daemon: block S0ix + keep display/system awake for iLink
+# keep-awake.ps1 - bridge lifecycle daemon: block S0ix + keep SYSTEM awake (network/iLink)
+# ES_SYSTEM only — display may be off (turn-off-screen / timeout); wake-screen.ps1 handles亮屏.
 # Started by start-weclaw.ps1 (singleton). Do not run multiple instances.
 param(
     [int]$RefreshSec = 45
@@ -6,8 +7,8 @@ param(
 
 $ErrorActionPreference = "Continue"
 
-# ES_CONTINUOUS | ES_DISPLAY_REQUIRED | ES_SYSTEM_REQUIRED
-$ES_PIN = [uint32]2147483651
+# ES_CONTINUOUS | ES_SYSTEM_REQUIRED  (NOT ES_DISPLAY — allows monitor off while LAN stays up)
+$ES_PIN = [uint32]2147483649
 # PowerRequestExecutionRequired
 $POWER_EXEC_REQUIRED = [uint32]3
 

@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+  <meta name="theme-color" content="#2563eb">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="亮屏">
+  <link rel="manifest" href="/manifest.json">
+  <link rel="icon" href="/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/icon.svg">
+  <title>电脑亮屏</title>
+  <style>
+    :root {
+      --bg: #0f1419;
+      --card: #1a2332;
+      --text: #e8edf4;
+      --muted: #8b9cb3;
+      --accent: #2563eb;
+      --accent-press: #1d4ed8;
+      --ok: #22c55e;
+      --err: #ef4444;
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+    }
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html, body {
+      margin: 0;
+      min-height: 100%;
+      background: radial-gradient(circle at top, #1e293b 0%, var(--bg) 55%);
+      color: var(--text);
+      font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    }
+    .wrap {
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px 20px calc(32px + var(--safe-bottom));
+      gap: 28px;
+    }
+    h1 {
+      margin: 0;
+      font-size: 1.5rem;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+    }
+    .sub {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.95rem;
+      text-align: center;
+      line-height: 1.5;
+      max-width: 20rem;
+    }
+    #wakeBtn {
+      width: min(72vw, 280px);
+      height: min(72vw, 280px);
+      border: none;
+      border-radius: 50%;
+      background: linear-gradient(145deg, #3b82f6, var(--accent));
+      color: #fff;
+      font-size: 2rem;
+      font-weight: 700;
+      box-shadow: 0 18px 48px rgba(37, 99, 235, 0.45), inset 0 2px 0 rgba(255,255,255,0.2);
+      touch-action: manipulation;
+      transition: transform 0.12s ease, box-shadow 0.12s ease, opacity 0.12s ease;
+    }
+    #wakeBtn:active:not(:disabled) {
+      transform: scale(0.96);
+      box-shadow: 0 8px 24px rgba(37, 99, 235, 0.35);
+      background: linear-gradient(145deg, #2563eb, var(--accent-press));
+    }
+    #wakeBtn:disabled {
+      opacity: 0.55;
+    }
+    #status {
+      min-height: 1.5rem;
+      font-size: 1rem;
+      text-align: center;
+      color: var(--muted);
+    }
+    #status.ok { color: var(--ok); }
+    #status.err { color: var(--err); }
+    .hint {
+      font-size: 0.82rem;
+      color: var(--muted);
+      text-align: center;
+      line-height: 1.6;
+      max-width: 22rem;
+    }
+    .setup {
+      display: none;
+      width: 100%;
+      max-width: 22rem;
+      background: var(--card);
+      border-radius: 16px;
+      padding: 16px;
+      gap: 10px;
+    }
+    .setup.show { display: grid; }
+    .setup label { font-size: 0.85rem; color: var(--muted); }
+    .setup input {
+      width: 100%;
+      padding: 12px 14px;
+      border-radius: 10px;
+      border: 1px solid #334155;
+      background: #0b1220;
+      color: var(--text);
+      font-size: 1rem;
+    }
+    .setup button {
+      margin-top: 4px;
+      padding: 12px;
+      border: none;
+      border-radius: 10px;
+      background: #334155;
+      color: var(--text);
+      font-size: 1rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div>
+      <h1>电脑亮屏</h1>
+      <p class="sub">关屏后微信断了？点下面按钮直接唤醒显示器</p>
+    </div>
+
+    <button id="wakeBtn" type="button" aria-label="亮屏">亮屏</button>
+    <div id="status" role="status" aria-live="polite"></div>
+
+    <div id="setup" class="setup">
+      <label for="baseUrl">电脑地址（含端口）</label>
+      <input id="baseUrl" type="url" inputmode="url" placeholder="http://192.168.1.10:18790" autocomplete="off">
+      <label for="token">密钥 token</label>
+      <input id="token" type="text" inputmode="latin" placeholder="setup 脚本输出的 token" autocomplete="off">
+      <button id="saveBtn" type="button">保存并连接</button>
+    </div>
+
+    <p class="hint" id="hint">
+      首次使用请用 setup-wake-mobile.ps1 生成的链接打开本页，或手动填写地址与 token。<br>
+      iOS：Safari 分享 → 添加到主屏幕；Android：Chrome 菜单 → 添加到主屏幕。
+    </p>
+  </div>
+
+  <script>
+    const LS_TOKEN = "wake_mobile_token";
+    const LS_BASE = "wake_mobile_base";
+
+    const wakeBtn = document.getElementById("wakeBtn");
+    const statusEl = document.getElementById("status");
+    const setupEl = document.getElementById("setup");
+    const baseInput = document.getElementById("baseUrl");
+    const tokenInput = document.getElementById("token");
+    const saveBtn = document.getElementById("saveBtn");
+
+    function setStatus(text, kind) {
+      statusEl.textContent = text;
+      statusEl.className = kind || "";
+    }
+
+    function getQueryToken() {
+      const p = new URLSearchParams(location.search);
+      return p.get("t") || p.get("token") || "";
+    }
+
+    function normalizeBase(url) {
+      return (url || "").trim().replace(/\/+$/, "");
+    }
+
+    function loadConfig() {
+      const qToken = getQueryToken();
+      if (qToken) {
+        localStorage.setItem(LS_TOKEN, qToken);
+        if (history.replaceState) {
+          history.replaceState({}, "", location.pathname);
+        }
+      }
+      const token = localStorage.getItem(LS_TOKEN) || "";
+      const base = normalizeBase(localStorage.getItem(LS_BASE) || location.origin);
+      if (!token) {
+        setupEl.classList.add("show");
+        wakeBtn.disabled = true;
+        setStatus("请先配置 token", "err");
+      } else {
+        setupEl.classList.remove("show");
+        wakeBtn.disabled = false;
+        setStatus("就绪，同一 WiFi 下可亮屏");
+      }
+      baseInput.value = base;
+      tokenInput.value = token;
+      return { token, base };
+    }
+
+    saveBtn.addEventListener("click", () => {
+      const base = normalizeBase(baseInput.value);
+      const token = tokenInput.value.trim();
+      if (!base || !token) {
+        setStatus("请填写地址和 token", "err");
+        return;
+      }
+      localStorage.setItem(LS_BASE, base);
+      localStorage.setItem(LS_TOKEN, token);
+      setupEl.classList.remove("show");
+      wakeBtn.disabled = false;
+      setStatus("已保存，可以亮屏");
+    });
+
+    async function wake() {
+      const { token, base } = loadConfig();
+      if (!token) return;
+
+      wakeBtn.disabled = true;
+      setStatus("正在唤醒…");
+
+      const url = base + "/api/wake";
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 15000);
+
+      try {
+        const res = await fetch(url, {
+          method: "POST",
+          headers: {
+            "Authorization": "Bearer " + token,
+            "Content-Type": "application/json"
+          },
+          body: "{}",
+          signal: ctrl.signal
+        });
+        const data = await res.json().catch(() => ({}));
+        if (res.ok && data.ok) {
+          setStatus(data.message || "已唤醒显示器", "ok");
+          if (navigator.vibrate) navigator.vibrate(80);
+        } else if (res.status === 401) {
+          setupEl.classList.add("show");
+          setStatus("token 无效，请重新配置", "err");
+        } else {
+          setStatus(data.error || data.message || ("失败 " + res.status), "err");
+        }
+      } catch (e) {
+        const msg = e.name === "AbortError"
+          ? "超时：关屏后网卡可能休眠。请在电脑上以管理员运行 scripts\\install-fix-screen-off-network.bat，或先手动点亮屏幕"
+          : "无法连接电脑：请同一 WiFi，或关屏后网卡已休眠（需电脑端修复）";
+        setStatus(msg, "err");
+      } finally {
+        clearTimeout(timer);
+        wakeBtn.disabled = false;
+      }
+    }
+
+    wakeBtn.addEventListener("click", wake);
+    loadConfig();
+  </script>
+</body>
+</html>
