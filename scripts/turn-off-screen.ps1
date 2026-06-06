@@ -1,6 +1,8 @@
 # turn-off-screen.ps1 - turn display off (monitor power off)
 # SendNotifyMessage (not SendMessage) — broadcast SendMessage can block on unresponsive windows.
-# Pin execution state so Agent tools don't hang when display is off
+#
+# One-shot SetThreadExecutionState below helps L3 (Agent bash during this prompt turn only).
+# Persistent L1 (iLink GetUpdates while display is off) is owned by keep-awake.ps1 — not this script.
 param()
 
 $ErrorActionPreference = "Continue"
@@ -18,8 +20,7 @@ try {
     Add-Type -MemberDefinition $def -Name Win32DisplayApi -Namespace Win32 -ErrorAction Stop
 }
 
-# ES_CONTINUOUS | ES_DISPLAY_REQUIRED | ES_SYSTEM_REQUIRED — keep GPU/display
-# subsystem alive even when monitor is physically off, so Agent tools don't hang
+# Transient pin for the current turn; exits when this process ends. See keep-awake.ps1 for L1.
 [void][Win32.Win32DisplayApi]::SetThreadExecutionState([uint32]2147483651)
 
 # WM_SYSCOMMAND (0x0112) + SC_MONITORPOWER (0xF170), lParam=2 => monitor off

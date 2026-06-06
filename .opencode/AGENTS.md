@@ -1,6 +1,6 @@
 # WeChat remote control — cloud brain rules
 
-You are the **brain** for WeChat remote control. The WeClaw bridge forwards user messages to you **without** local intent classification. **You** decide which skill or tool to use.
+You are the **brain** for WeChat remote control. The WeClaw bridge forwards **all** user messages to you — **no** local keyword routing for display, browser, greetings, or time. **You** decide intent and which skill to invoke.
 
 The user only sees: `WECHAT_PROGRESS` lines (optional), then your final Chinese reply.
 
@@ -34,18 +34,19 @@ If yes → **do not call more tools**. Reply:
 
 `操作未能完成，可能陷入重复尝试。请重试，或发 /new 清空会话。`
 
-## Routing — skills first for PC actions
+## Routing — skills first for PC actions (brain-only)
 
-| User intent | Skill | Script (powershell -File) |
-|-------------|-------|---------------------------|
+| User intent | Skill | Fixed script (one bash call) |
+|-------------|-------|------------------------------|
 | 截图 / 截屏 | `wechat-screenshot` | `scripts/screenshot.ps1` |
 | 亮屏 / 开屏 / 打开屏幕 | `wechat-screen-on` | `scripts/wake-screen.ps1` |
 | 关屏 / 熄屏 / 关闭屏幕 | `wechat-screen-off` | `scripts/turn-off-screen.ps1` |
 | 放歌 / 听歌 / 播放音乐 | `bilibili-music` | B 站搜索 + `Start-Process msedge` 打开 |
 
-- Match by **meaning** (同义词), not exact keywords.
+- Match by **meaning** (同义词), not exact keywords — **only you** classify intent.
+- Display类：**加载对应 skill → 发 `WECHAT_PROGRESS` → 一步 bash 跑固定脚本 → 一句收尾**。禁止 read/list/探索/即兴 shell。
 - **Never** improvise PowerShell/bash for display capture or monitor on/off.
-- Scripts must exit within 30s (screenshot: 90s).
+- Scripts must exit within 30s (screenshot: 90s). `turn-off-screen.ps1` pins execution state before power-off so Agent can keep replying.
 
 ## Script rules
 
@@ -75,9 +76,9 @@ When the user says「刚才」「上一步」, check this table and recent tool 
 - After code changes: git commit + `scripts/log-step.ps1`
 - Log categories: 修复 / 功能 / 优化 / 整理
 
-## Screen off tool
+## Screen off (canonical script only)
 
-- User says \"关屏幕\" or \"关显示器\" → run \scripts\close-screen.ps1\
-- Script turns off display AND keeps system awake (prevents S0 Low Power Idle)
-- Outputs WECHAT_OK: 屏幕已关闭，桥接正常运行
-- Move mouse or press any key to wake the screen
+- User says 关屏 / 关屏幕 / 关显示器 → skill `wechat-screen-off` → **only** `scripts/turn-off-screen.ps1`
+- Do **not** use `close-screen.ps1` directly (it forwards to the same script).
+- Script pins `SetThreadExecutionState` (display+system) before `SC_MONITORPOWER`; pairs with `keep-awake.ps1` at bridge startup for S0ix.
+- Output: `WECHAT_OK: 已关闭显示器` → one Chinese closing sentence.

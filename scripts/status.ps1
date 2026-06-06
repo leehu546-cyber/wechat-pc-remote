@@ -3,6 +3,16 @@ Write-Host ""
 Write-Host "=== WeClaw + OpenCode Status ===" -ForegroundColor Cyan
 
 $weclaw = Join-Path $PSScriptRoot "..\weclaw\weclaw.exe"
+. (Join-Path $PSScriptRoot "keep-awake-util.ps1")
+$keepPids = Get-KeepAwakeDaemonPids
+if ($keepPids.Count -eq 1) {
+    Write-Host "[ok] keep-awake pid=$($keepPids[0])" -ForegroundColor Green
+} elseif ($keepPids.Count -gt 1) {
+    Write-Host "[!!] keep-awake duplicate pids=$($keepPids -join ',')" -ForegroundColor Red
+} else {
+    Write-Host "[--] keep-awake not running" -ForegroundColor Yellow
+}
+
 $weclawProc = Get-Process -Name weclaw -ErrorAction SilentlyContinue
 if ($weclawProc) {
     Write-Host "[ok] weclaw running pid=$($weclawProc.Id -join ',')" -ForegroundColor Green

@@ -1,5 +1,9 @@
-# Start keep-awake daemon (prevents S0 Modern Standby when screen off)
-Start-Process powershell -ArgumentList "-ExecutionPolicy Bypass -File `"$PSScriptRoot\keep-awake.ps1`"" -WindowStyle Hidden
+# Singleton keep-awake: PowerRequestExecutionRequired + periodic SetThreadExecutionState (L1 iLink)
+. (Join-Path $PSScriptRoot "keep-awake-util.ps1")
+$keepAwake = Start-KeepAwakeDaemon -ScriptsRoot $PSScriptRoot
+if ($keepAwake) {
+    Write-Host "keep-awake daemon pid=$($keepAwake.Id)" -ForegroundColor Green
+}
 
 # Start WeClaw WeChat bridge (default agent: OpenCode ACP)
 $weclaw = Join-Path $PSScriptRoot "..\weclaw\weclaw.exe"

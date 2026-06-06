@@ -97,7 +97,7 @@ function Test-LocalQuickScriptRunning {
     foreach ($proc in Get-Process -Name powershell,pwsh,python -ErrorAction SilentlyContinue) {
         try {
             $cmd = (Get-CimInstance Win32_Process -Filter "ProcessId=$($proc.Id)" -ErrorAction SilentlyContinue).CommandLine
-            if ($cmd -match 'screenshot\.ps1|wake-screen\.ps1|turn-off-screen\.ps1|wake-display\.py') {
+            if ($cmd -match 'screenshot\.ps1|wake-screen\.ps1|turn-off-screen\.ps1|close-screen\.ps1|wake-display\.py') {
                 return $true, "local script running (pid=$($proc.Id))"
             }
         } catch { }
