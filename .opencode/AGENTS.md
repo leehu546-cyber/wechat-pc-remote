@@ -41,6 +41,7 @@ If yes → **do not call more tools**. Reply:
 | 截图 / 截屏 | `wechat-screenshot` | `scripts/screenshot.ps1` |
 | 亮屏 / 开屏 / 打开屏幕 | `wechat-screen-on` | `scripts/wake-screen.ps1` |
 | 关屏 / 熄屏 / 关闭屏幕 | `wechat-screen-off` | `scripts/turn-off-screen.ps1` |
+| 放歌 / 听歌 / 播放音乐 | `bilibili-music` | B 站搜索 + `Start-Process msedge` 打开 |
 
 - Match by **meaning** (同义词), not exact keywords.
 - **Never** improvise PowerShell/bash for display capture or monitor on/off.
@@ -73,3 +74,10 @@ When the user says「刚才」「上一步」, check this table and recent tool 
 
 - After code changes: git commit + `scripts/log-step.ps1`
 - Log categories: 修复 / 功能 / 优化 / 整理
+
+## Screen off tool
+
+- User says \"关屏幕\" or \"关显示器\" → run \scripts\close-screen.ps1\
+- Script turns off display AND keeps system awake (prevents S0 Low Power Idle)
+- Outputs WECHAT_OK: 屏幕已关闭，桥接正常运行
+- Move mouse or press any key to wake the screen

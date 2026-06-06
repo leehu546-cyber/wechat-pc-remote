@@ -1,3 +1,6 @@
+# Start keep-awake daemon (prevents S0 Modern Standby when screen off)
+Start-Process powershell -ArgumentList "-ExecutionPolicy Bypass -File `"$PSScriptRoot\keep-awake.ps1`"" -WindowStyle Hidden
+
 # Start WeClaw WeChat bridge (default agent: OpenCode ACP)
 $weclaw = Join-Path $PSScriptRoot "..\weclaw\weclaw.exe"
 if (-not (Test-Path $weclaw)) {
@@ -28,3 +31,4 @@ if (-not (Get-ScheduledTask -TaskName $watchdogTask -ErrorAction SilentlyContinu
 
 Write-Host "Starting WeClaw (default: OpenCode)... Scan QR on first run." -ForegroundColor Cyan
 & $weclaw start
+
