@@ -63,10 +63,15 @@ $bitmap.Save($filePath, [System.Drawing.Imaging.ImageFormat]::Png)
 $bitmap.Dispose()
 
 $port = 18090
-while ($true) {
+$maxPort = 18120
+while ($port -le $maxPort) {
     $inUse = Get-NetTCPConnection -LocalPort $port -ErrorAction SilentlyContinue
     if (-not $inUse) { break }
     $port++
+}
+if ($port -gt $maxPort) {
+    Write-Host "WECHAT_FAIL: 无法分配本地 HTTP 端口"
+    exit 1
 }
 $proc = Start-Process python -ArgumentList "-m http.server $port --directory `"$dir`"" -WindowStyle Hidden -PassThru
 Start-Sleep 2

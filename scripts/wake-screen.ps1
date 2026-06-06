@@ -1,18 +1,14 @@
-﻿# wake-screen.ps1 - turn display on (monitor was off / screen saver)
+﻿# wake-screen.ps1 - turn display on (monitor off / screensaver)
+# SendNotifyMessage (not SendMessage) — broadcast SendMessage can block on unresponsive windows.
 param()
 
-$ErrorActionPreference = "Stop"
-$pyScript = Join-Path $PSScriptRoot "wake-display.py"
-
-if (Test-Path $pyScript) {
-    python $pyScript
-    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-    exit 0
-}
+$ErrorActionPreference = "Continue"
 
 $def = @'
-[DllImport("user32.dll", EntryPoint = "SendMessageW")]
-public static extern IntPtr SendMessage(IntPtr hWnd, uint Msg, IntPtr wParam, IntPtr lParam);
+[DllImport("kernel32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+public static extern uint SetThreadExecutionState(uint esFlags);
+[DllImport("user32.dll", EntryPoint = "SendNotifyMessageW")]
+public static extern bool SendNotifyMessage(IntPtr hWnd, uint Msg, IntPtr wParam, IntPtr lParam);
 [DllImport("user32.dll")]
 public static extern void mouse_event(uint dwFlags, uint dx, uint dy, uint dwData, UIntPtr dwExtraInfo);
 '@
@@ -23,8 +19,12 @@ try {
     Add-Type -MemberDefinition $def -Name Win32WakeApi -Namespace Win32 -ErrorAction Stop
 }
 
+# ES_CONTINUOUS | ES_DISPLAY_REQUIRED | ES_SYSTEM_REQUIRED
+# ES_CONTINUOUS | ES_DISPLAY_REQUIRED | ES_SYSTEM_REQUIRED (must be uint32, not signed hex)
+[void][Win32.Win32WakeApi]::SetThreadExecutionState([uint32]2147483651)
+
 $on = [IntPtr](-1)
-[void][Win32.Win32WakeApi]::SendMessage([IntPtr]0xFFFF, 0x0112, [IntPtr]0xF170, $on)
+[void][Win32.Win32WakeApi]::SendNotifyMessage([IntPtr]0xFFFF, 0x0112, [IntPtr]0xF170, $on)
 [Win32.Win32WakeApi]::mouse_event(0x0001, 1, 0, 0, [UIntPtr]::Zero)
 
 Write-Host "WECHAT_OK: 已唤醒显示器"

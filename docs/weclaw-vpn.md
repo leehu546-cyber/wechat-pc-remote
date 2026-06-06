@@ -20,6 +20,14 @@ ilinkai.weixin.qq.com
 
 TUN 模式下务必让上述域名不走代理，否则日志中可能出现 `172.19.x.x` 源地址与 `GetUpdates error`。
 
+## 一键配置（Clash Nyanpasu）
+
+```powershell
+D:\cursor\61\scripts\setup-clash-ilink-direct.ps1
+```
+
+会写入 `system_proxy_bypass`、规则 `DIRECT` 与 `fake-ip-filter`。改完后在 Clash Nyanpasu **重新加载配置**，再 `restart-weclaw.ps1`。
+
 ## 验证
 
 1. 关闭 VPN 后 `scripts\status.ps1` 应显示微信已登录。
