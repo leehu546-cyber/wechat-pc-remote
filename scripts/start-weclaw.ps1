@@ -17,5 +17,14 @@ if (Test-Path $stopLegacy) { & $stopLegacy | Out-Null }
 $everosScript = Join-Path $PSScriptRoot "start-everos.ps1"
 if (Test-Path $everosScript) { & $everosScript }
 
+$watchdogTask = "WeClawWatchdog"
+if (-not (Get-ScheduledTask -TaskName $watchdogTask -ErrorAction SilentlyContinue)) {
+    $registerWatchdog = Join-Path $PSScriptRoot "register-weclaw-watchdog.ps1"
+    if (Test-Path $registerWatchdog) {
+        Write-Host "Registering missing $watchdogTask scheduled task..." -ForegroundColor Yellow
+        & $registerWatchdog
+    }
+}
+
 Write-Host "Starting WeClaw (default: OpenCode)... Scan QR on first run." -ForegroundColor Cyan
 & $weclaw start

@@ -87,13 +87,9 @@ if (Test-Path $everosScript) {
 
 # --- 7. Scheduled task: ACP watchdog (every 5 min) ---
 Write-Host "[7/7] ACP session watchdog..." -ForegroundColor Yellow
-$watchdogTask = "WeClawWatchdog"
-$watchdogScript = Join-Path $PSScriptRoot "weclaw-watchdog.ps1"
-$watchdogAction = New-ScheduledTaskAction -Execute "powershell.exe" `
-    -Argument "-ExecutionPolicy Bypass -WindowStyle Hidden -File `"$watchdogScript`""
-$watchdogTrigger = New-ScheduledTaskTrigger -Daily -At "00:00" -RepetitionInterval (New-TimeSpan -Minutes 5) -RepetitionDuration ([TimeSpan]::MaxValue)
-Register-ScheduledTask -TaskName $watchdogTask -Action $watchdogAction -Trigger $watchdogTrigger -Settings $settings -Force | Out-Null
-Write-Host "      Task: $watchdogTask (every 5 min)" -ForegroundColor Green
+$registerWatchdog = Join-Path $PSScriptRoot "register-weclaw-watchdog.ps1"
+if (Test-Path $registerWatchdog) { & $registerWatchdog }
+else { Write-Host "      Skip (register-weclaw-watchdog.ps1 not found)" -ForegroundColor DarkYellow }
 
 Write-Host "Done. Tips:" -ForegroundColor Cyan
 Write-Host "  - Keep PC plugged in for 24/7 use"

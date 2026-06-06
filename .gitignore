@@ -36,3 +36,9 @@ debug-*.log
 
 # VS Code settings (已迁到全局)
 .vscode/
+
+# Litter 项目（独立仓库）
+litter/
+
+# 临时克隆/测试目录
+narwal_r/

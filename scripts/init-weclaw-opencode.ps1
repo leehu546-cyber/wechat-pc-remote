@@ -39,7 +39,7 @@ $defaultProgress = @{
 }
 $defaultRouting = @{
     simple_bypass   = $true
-    cancel_previous = $false
+    cancel_previous = $true
 }
 $defaultMemory = @{
     everos = @{
@@ -69,6 +69,9 @@ if (Test-Path $configPath) {
     }
     if (-not $cfg.routing) {
         $cfg | Add-Member -NotePropertyName routing -NotePropertyValue ([pscustomobject]$defaultRouting)
+    } elseif (-not $cfg.routing.cancel_previous) {
+        $cfg.routing | Add-Member -NotePropertyName cancel_previous -NotePropertyValue $true -Force
+        Write-Host "Upgraded routing.cancel_previous false→true (session/cancel + watchdog)" -ForegroundColor Yellow
     }
     if (-not $cfg.memory) {
         $cfg | Add-Member -NotePropertyName memory -NotePropertyValue ([pscustomobject]$defaultMemory)
@@ -159,7 +162,7 @@ Write-Host "  default_agent: opencode"
 Write-Host "  model: $model"
 Write-Host "  cwd: $workDir"
 Write-Host "  progress: mode=$($defaultProgress.mode), enabled=$($defaultProgress.enabled), start_delay=$($defaultProgress.start_delay_sec)s"
-Write-Host "  routing.cancel_previous: $($defaultRouting.cancel_previous) (requires weclaw session/cancel patch)"
+Write-Host "  routing.cancel_previous: $($defaultRouting.cancel_previous) (session/cancel patch + WeClawWatchdog)"
 Write-Host "  memory.everos: enabled=$($defaultMemory.everos.enabled), base=$($defaultMemory.everos.base_url)"
 Write-Host ""
 Write-Host "Next: weclaw start (scan QR on first run)" -ForegroundColor Cyan

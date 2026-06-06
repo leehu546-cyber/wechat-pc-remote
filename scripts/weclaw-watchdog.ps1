@@ -11,9 +11,20 @@ param(
 
 $ErrorActionPreference = "Continue"
 $weclawLog = Join-Path $env:USERPROFILE ".weclaw\weclaw.log"
+$weclawConfig = Join-Path $env:USERPROFILE ".weclaw\config.json"
 $restartScript = Join-Path $PSScriptRoot "restart-weclaw.ps1"
 $everosScript = Join-Path $PSScriptRoot "start-everos.ps1"
 $watchdogLog = Join-Path $env:USERPROFILE ".weclaw\watchdog.log"
+
+function Test-EverOSEnabled {
+    if (-not (Test-Path $weclawConfig)) { return $false }
+    try {
+        $cfg = Get-Content $weclawConfig -Raw -Encoding UTF8 | ConvertFrom-Json
+        return [bool]$cfg.memory.everos.enabled
+    } catch {
+        return $false
+    }
+}
 
 function Write-Log($msg) {
     $line = "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') [watchdog] $msg"
@@ -158,7 +169,8 @@ function Start-EverOSIfNeeded {
 
 function Test-Healthy {
     $weclawOk = $null -ne (Get-Process -Name weclaw -ErrorAction SilentlyContinue)
-    $everosOk = Test-EverOSHealthy
+    $everosRequired = Test-EverOSEnabled
+    $everosOk = if ($everosRequired) { Test-EverOSHealthy } else { $true }
     $acpPid = Get-ACPProcessIdFromLog
     $acpAlive = Test-ProcessAlive $acpPid
     $errors = Get-RecentErrors
@@ -166,10 +178,11 @@ function Test-Healthy {
     $getUpdatesStuck, $getUpdatesReason = Test-GetUpdatesErrors
     $toolHang, $toolHangReason = Test-ToolHangStuck
 
-    Write-Log "check: weclaw=$weclawOk everos=$everosOk acp_log_pid=$acpPid acp_alive=$acpAlive recent_errors=$($errors.Count) stuck=$stuck getupdates=$getUpdatesStuck toolhang=$toolHang"
+    $everosLabel = if ($everosRequired) { $everosOk } else { 'skip' }
+    Write-Log "check: weclaw=$weclawOk everos=$everosLabel acp_log_pid=$acpPid acp_alive=$acpAlive recent_errors=$($errors.Count) stuck=$stuck getupdates=$getUpdatesStuck toolhang=$toolHang"
 
     if (-not $weclawOk) { return $false, 'weclaw not running' }
-    if (-not $everosOk) {
+    if ($everosRequired -and -not $everosOk) {
         if (Start-EverOSIfNeeded) {
             Write-Log "EverOS recovered without bridge restart"
         } else {
