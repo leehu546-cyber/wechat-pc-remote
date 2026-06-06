@@ -1,4 +1,4 @@
-# 向操作日志追加一条记录
+﻿# 向操作日志追加一条记录
 # 用法: .\log-step.ps1 -Title "标题" -Category "开发" -Body "操作说明" [-Result "结果"]
 param(
     [Parameter(Mandatory)][string]$Title,
@@ -7,7 +7,7 @@ param(
     [string]$Result = ""
 )
 
-$logFile = (Resolve-Path (Join-Path $PSScriptRoot "..\docs\操作日志.md")).Path
+$logFile = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot "..\docs\操作日志.md"))
 $content = [System.IO.File]::ReadAllText($logFile, [System.Text.Encoding]::UTF8)
 
 # 计算下一个序号

@@ -1,4 +1,4 @@
-# screenshot.ps1 - wake display, capture all screens, send via WeChat
+﻿# screenshot.ps1 - wake display, capture all screens, send via WeChat
 param(
     [switch]$SkipWake = $false
 )

@@ -1,4 +1,4 @@
-# wake-screen.ps1 - turn display on (monitor was off / screen saver)
+﻿# wake-screen.ps1 - turn display on (monitor was off / screen saver)
 param()
 
 $ErrorActionPreference = "Stop"
