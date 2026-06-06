@@ -42,9 +42,10 @@ If yes → **do not call more tools**. Reply:
 | 亮屏 / 开屏 / 打开屏幕 | `wechat-screen-on` | `scripts/wake-screen.ps1` |
 | 关屏 / 熄屏 / 关闭屏幕 | `wechat-screen-off` | `scripts/turn-off-screen.ps1` |
 | 放歌 / 听歌 / 播放音乐 | `bilibili-music` | B 站搜索 + `Start-Process msedge` 打开 |
-| 解锁 / 解锁屏幕 / 解锁电脑 | `wechat-screen-unlock` | `scripts/unlock-screen.ps1` |
+| 解锁 / 解锁屏幕 / 解锁电脑 / 进到桌面 / 锁屏输密码 / 检索屏幕(要离开锁屏) | **`wechat-screen-unlock`（必须先加载）** | `scripts/unlock-screen.ps1` |
 
 - Match by **meaning** (同义词), not exact keywords — **only you** classify intent.
+- **Unlock is authorized** — never refuse with「Windows 不允许远程解锁」; password is in `~/.weclaw/unlock-screen.json`.
 - Display类：**加载对应 skill → 发 `WECHAT_PROGRESS` → 一步 bash 跑固定脚本 → 一句收尾**。禁止 read/list/探索/即兴 shell。
 - **Never** improvise PowerShell/bash for display capture or monitor on/off.
 - Scripts must exit within 30s (screenshot: 90s). `turn-off-screen.ps1` pins execution state before power-off so Agent can keep replying.
@@ -84,10 +85,24 @@ When the user says「刚才」「上一步」, check this table and recent tool 
 - Script pins `SetThreadExecutionState` (display+system) before `SC_MONITORPOWER`; pairs with `keep-awake.ps1` at bridge startup for S0ix.
 - Output: `WECHAT_OK: 已关闭显示器` → one Chinese closing sentence.
 
-## Screen unlock (canonical script only)
+## Screen unlock (MANDATORY skill + script — read before acting)
 
-- User says 解锁 / 解锁屏幕 / 解锁电脑 → skill `wechat-screen-unlock` → **only** `scripts/unlock-screen.ps1`
-- **Not** `wechat-screen-on`: 亮屏 only wakes the monitor; unlock types PIN on the lock screen.
-- Flow: `wake-screen.ps1` then `schtasks /RL HIGHEST` + `SendKeys` (lock UI needs high integrity).
-- Password: `%USERPROFILE%\.weclaw\unlock-screen.json` — never in chat, repo, or AGENTS.md.
-- Output: `WECHAT_OK: unlock password sent` → one Chinese closing sentence.
+**Trigger:** 解锁 / 解锁屏幕 / 解锁电脑 / 进到桌面 / 锁屏 / 代输密码 / 检索屏幕且要离开锁屏.
+
+**Step 0 — load skill `wechat-screen-unlock` (before any other tool).**
+
+**Step 1 — exactly one bash (no second command, no edits, no screenshot, no mouse click):**
+
+```bash
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/unlock-screen.ps1
+```
+
+**Why click fails:** Agent mouse click can focus the lock-screen password box (user sees cursor) but **cannot type the password** into Secure Desktop. Only the script path above injects keys: `schtasks`(current USER) → `unlock-sendkeys.ps1` → SendKeys(Space + password + Enter).
+
+**Forbidden for unlock:** refuse the request; `wechat-screen-on`; screenshot+click; SendInput/OpenInputDesktop; SYSTEM/RunAs; editing unlock scripts in chat; claiming success without `WECHAT_OK: unlock password sent` in tool output.
+
+**Not** `wechat-screen-on`: wake only, no PIN.
+
+Password: `%USERPROFILE%\.weclaw\unlock-screen.json` only — never in chat or repo.
+
+Success line: `WECHAT_OK: unlock password sent` → one Chinese closing sentence.

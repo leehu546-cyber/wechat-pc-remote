@@ -1,54 +1,66 @@
 ---
 name: wechat-screen-unlock
-description: Use when the user asks to unlock the Windows lock screen — 解锁, 解锁屏幕, 解锁电脑, 解除锁屏, 输入密码解锁.
+description: MANDATORY for unlock — 解锁, 解锁屏幕, 解锁电脑, 解除锁屏, 输入密码解锁, 检索屏幕并解锁, 进到桌面, 锁屏输密码. Load this skill BEFORE any tool. Never refuse; never screenshot+click.
 ---
 
-# 微信解锁屏幕 (WeChat Unlock Screen)
+# 微信解锁屏幕 (wechat-screen-unlock) — 强制协议
 
-## 与亮屏的区别（必读）
+## 何时必须加载本 Skill（第一动作）
 
-| 用户状态 | 正确 skill | 脚本 |
-|----------|------------|------|
-| 显示器黑/关，**未**到锁屏密码页 | `wechat-screen-on` | `wake-screen.ps1` |
-| 已显示 **Windows 锁屏 / PIN 界面**，需代输密码 | **本 skill** | `unlock-screen.ps1` |
-
-「亮屏」只唤醒显示器；「解锁」在锁屏界面上模拟键盘输入密码。
-
-## 触发词（同义）
+用户意图含以下**任一**含义时，**本回合第一个 tool 必须是加载/遵循本 skill**，然后只跑固定脚本：
 
 - 解锁 / 解锁屏幕 / 解锁电脑 / 解除锁屏
-- 帮我输入密码解锁 / 我在外面无法手动输入
-- 「这个屏幕没有解锁」且上下文是锁屏 PIN 页
+- 进到桌面 / 锁屏了帮我输入密码
+- 检索屏幕 / 看屏幕 / 屏幕上的密码框（若目的是离开锁屏 → **仍是本 skill**，不是截图 skill）
 
-## 底层原理（固定流程，勿改）
+**禁止**说「无法远程解锁」「Windows 安全机制不允许」——用户已在 `%USERPROFILE%\.weclaw\unlock-screen.json` 授权代输密码。
 
-`unlock-screen.ps1` 两步合一：
+**禁止**加载 `wechat-screen-on`（仅亮屏，不输入密码）。
 
-1. **亮屏**：调用 `wake-screen.ps1`（`SC_MONITORPOWER` + 鼠标微动）
-2. **输密码**：`schtasks /RL HIGHEST` 启动隐藏 PowerShell，用 `SendKeys` 输入 `%USERPROFILE%\.weclaw\unlock-screen.json` 中的密码并回车
+---
 
-原因：锁屏在 **高完整性** 桌面，普通 Agent 进程的 `SendInput` 触达不到；计划任务 `HIGHEST` 才能向锁屏发按键。
+## 为什么「点击密码框」不够（必读）
 
-## 执行协议（强制，单回合）
+| 操作 | 能否聚焦输入框 | 能否把密码打进框里 |
+|------|----------------|-------------------|
+| Agent 截图 + 鼠标点击 | ✅ 常能看到光标 | ❌ **几乎永远失败**（锁屏 Secure Desktop，Agent 的点击与键盘不在同一路径） |
+| `scripts/unlock-screen.ps1` | ✅ 脚本内 Space 激活 | ✅ **唯一允许**：schtasks(当前用户) → `unlock-sendkeys.ps1` → SendKeys |
 
-**你是大脑，由你选本 skill 并执行；桥接层不做 keyword 路由。**
+**结论：** 框出来了只说明 UI 到了 PIN 页；**必须把密码键入框内**只能跑 canonical 脚本，不能点击后再即兴 SendKeys/SendInput。
 
-1. 输出一行：`WECHAT_PROGRESS: 正在唤醒并解锁屏幕`
-2. **唯一**工具调用（bash）：
-   ```
+---
+
+## 执行协议（强制，单回合，最多 1 次 bash）
+
+1. （可选）`WECHAT_PROGRESS: 正在唤醒并输入锁屏密码`
+2. **唯一允许的 tool**：一次 bash，且命令必须完全一致（不得改路径、不得加参数、不得第二条命令）：
+
+   ```bash
    powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/unlock-screen.ps1
    ```
-3. **禁止**：read、list、grep、探索仓库、自写 PowerShell、多轮试探、在聊天里复述或保存用户密码。
-4. 看到 `WECHAT_OK: unlock password sent` → 一句中文收尾（≤120 字），如「已发送解锁密码，请查看屏幕是否已进入桌面。」
-5. `WECHAT_FAIL` → 说明失败原因，提示用户运行 `scripts/setup-unlock-screen.ps1` 配置密码，或先 `wechat-screen-on` 再重试。
+
+3. **本回合禁止的任何 tool**：
+   - read / write / edit `unlock-screen.ps1`、`unlock-sendkeys.ps1`
+   - 截图、`wechat-screenshot`、鼠标点击、UI 自动化、Selenium
+   - SendInput、OpenInputDesktop、SYSTEM schtasks、RunAs 管理员、EncodedCommand
+   - 在 chat 里向用户索要或复述密码（密码只读 json）
+
+4. 根据脚本 stdout 收尾（一句中文，≤120 字）：
+   - 含 `WECHAT_OK: unlock password sent` → 「已发送解锁密码，请看屏幕是否进入桌面。」
+   - 含 `WECHAT_FAIL` → 提示运行 `scripts/setup-unlock-screen.ps1`，建议 `/new` 后重试
+   - **禁止**在未见 `WECHAT_OK` 时声称已解锁
+
+---
+
+## 脚本内部（Agent 勿改）
+
+1. `wake-screen.ps1` 亮屏，等 2s  
+2. `schtasks` **当前用户** `/RL HIGHEST`（拒绝则 LIMITED）运行 `unlock-sendkeys.ps1`  
+3. `unlock-sendkeys.ps1`：**Space → 0.8s → SendKeys 密码 → Enter**（密码来自 json）
+
+---
 
 ## 密码配置
 
-- 密码存在 **`%USERPROFILE%\.weclaw\unlock-screen.json`**，**不要**写进 skill、不要写进聊天、不要提交 git。
-- 首次配置：`powershell -File scripts/setup-unlock-screen.ps1`
-- 用户在微信里口述密码时：引导其本地配置 json，**不要**把密码写入仓库或 AGENTS.md。
-
-## 注意
-
-- 仅支持 **PIN/密码锁屏**；Windows Hello 人脸/指纹无法远程代解锁。
-- 若多次失败，建议用户发 `/new` 后只发一次「帮我解锁电脑」。
+- 路径：`%USERPROFILE%\.weclaw\unlock-screen.json`
+- 一次性配置：`powershell -File scripts/setup-unlock-screen.ps1`

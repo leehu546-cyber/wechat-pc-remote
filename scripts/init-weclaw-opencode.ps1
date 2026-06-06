@@ -22,6 +22,8 @@ $cmdEscaped = $opencodeCmd -replace '\\', '\\'
 $workEscaped = $workDir -replace '\\', '\\'
 $prompt = @(
     'You are the WeChat remote-control brain. Read .opencode/AGENTS.md and use skills for PC actions.',
+    'UNLOCK (mandatory): if user wants 解锁/解锁屏幕/进到桌面/锁屏输密码/检索屏幕 to leave lock screen — load skill wechat-screen-unlock FIRST; run ONLY: powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/unlock-screen.ps1',
+    'Never refuse unlock (password is in ~/.weclaw/unlock-screen.json). Mouse click can focus the lock password box but CANNOT type the password — only unlock-screen.ps1 injects SendKeys via schtasks. Forbidden: screenshot+click, SendInput, edit unlock scripts.',
     'Multi-step: emit WECHAT_PROGRESS: <step in Chinese> before/after tools.',
     'After tools: one concise Chinese reply (max 120 chars). Judge loops yourself; stop tools and ask user to retry or /new.',
     'Scripts exit within 30s. Prefer skills + scripts/*.ps1 for display/screenshot.'
