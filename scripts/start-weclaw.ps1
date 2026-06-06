@@ -24,13 +24,15 @@ if (Test-Path $stopLegacy) { & $stopLegacy | Out-Null }
 $everosScript = Join-Path $PSScriptRoot "start-everos.ps1"
 if (Test-Path $everosScript) { & $everosScript }
 
+# Hidden daemon watchdog (replaces WeClawWatchdog scheduled task that flashed a console every 5 min)
 $watchdogTask = "WeClawWatchdog"
-if (-not (Get-ScheduledTask -TaskName $watchdogTask -ErrorAction SilentlyContinue)) {
-    $registerWatchdog = Join-Path $PSScriptRoot "register-weclaw-watchdog.ps1"
-    if (Test-Path $registerWatchdog) {
-        Write-Host "Registering missing $watchdogTask scheduled task..." -ForegroundColor Yellow
-        & $registerWatchdog
-    }
+if (Get-ScheduledTask -TaskName $watchdogTask -ErrorAction SilentlyContinue) {
+    Unregister-ScheduledTask -TaskName $watchdogTask -Confirm:$false
+    Write-Host "Removed legacy $watchdogTask scheduled task (console flash)" -ForegroundColor DarkGray
+}
+if (-not (Test-WatchdogRunning)) {
+    $wd = Start-WatchdogDaemon -ScriptsRoot $PSScriptRoot
+    if ($wd) { Write-Host "watchdog daemon pid=$($wd.Id) (hidden)" -ForegroundColor Green }
 }
 
 Write-Host "Starting WeClaw (default: OpenCode)... Scan QR on first run." -ForegroundColor Cyan
