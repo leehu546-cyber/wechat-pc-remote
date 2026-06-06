@@ -1,0 +1,8 @@
+# WeClaw iLink server IPs — bypass TUN in global mode
+# Refresh: D:\cursor\61\scripts\setup-clash-ilink-direct.ps1
+payload:
+  - IP-CIDR,120.204.0.108/32,no-resolve
+  - IP-CIDR,183.192.195.196/32,no-resolve
+  - IP-CIDR,36.155.182.76/32,no-resolve
+  - IP-CIDR,36.155.189.158/32,no-resolve
+  - IP-CIDR,43.163.179.90/32,no-resolve

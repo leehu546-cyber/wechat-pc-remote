@@ -1,32 +1,32 @@
 # WeClaw 与 VPN / 代理配置
 
-微信桥接依赖 PC 上 `weclaw.exe` 长轮询 `ilinkai.weixin.qq.com`。若流量走 Clash TUN / VPN，重连时会导致微信显示「暂无法连接 OpenClaw」。
+微信桥接依赖 PC 上 `weclaw.exe` 长轮询 `ilinkai.weixin.qq.com`。若流量走 Clash 代理 / TUN，会导致微信显示「暂无法连接 OpenClaw」（日志 `172.19.x.x` + `GetUpdates error`）。
 
-## Clash / Clash Verge 建议
+## 模式说明
 
-在规则中为 iLink **直连（DIRECT）**：
+| Clash 模式 | 仅靠 `rules: DIRECT` 够吗？ | 正确绕过方式 |
+|-----------|---------------------------|-------------|
+| 规则模式 | ✅ 够 | `prepend-rules` + `fake-ip-filter` |
+| **全局模式** | ❌ 不够（规则被忽略） | **`tun.route-exclude-address`** + IP 列表 |
+| TUN 开启 | 系统 bypass 无效 | 同上 + `fake-ip-filter` |
 
-```yaml
-rules:
-  - DOMAIN,ilinkai.weixin.qq.com,DIRECT
-  - IP-CIDR,43.163.179.90/32,DIRECT
-```
-
-或在「绕过域名 / Bypass」中加入：
-
-```
-ilinkai.weixin.qq.com
-```
-
-TUN 模式下务必让上述域名不走代理，否则日志中可能出现 `172.19.x.x` 源地址与 `GetUpdates error`。
-
-## 一键配置（Clash Nyanpasu）
+## 一键配置（Clash Nyanpasu，支持全局 + TUN）
 
 ```powershell
 D:\cursor\61\scripts\setup-clash-ilink-direct.ps1
 ```
 
-会写入 `system_proxy_bypass`、规则 `DIRECT` 与 `fake-ip-filter`。改完后在 Clash Nyanpasu **重新加载配置**，再 `restart-weclaw.ps1`。
+脚本会：
+
+1. 解析 `ilinkai.weixin.qq.com` 真实 IP → `weclaw-ilink-ip.yaml`
+2. 写入 `tun.route-exclude-address`（全局/TUN 下绕过代理的关键）
+3. 写入 `prepend-rules`、`fake-ip-filter`、`nameserver-policy`（规则模式兜底）
+4. 注册 Merge 配置链 `WeClaw iLink Bypass`
+5. 设置 `system_proxy_bypass`
+
+改完后在 Clash Nyanpasu **重新加载配置**，再 `restart-weclaw.ps1`。
+
+订阅更新后请再跑一遍脚本（IP 可能变化）。
 
 ## 验证
 
