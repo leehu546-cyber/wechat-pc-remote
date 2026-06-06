@@ -42,6 +42,7 @@ If yes → **do not call more tools**. Reply:
 | 亮屏 / 开屏 / 打开屏幕 | `wechat-screen-on` | `scripts/wake-screen.ps1` |
 | 关屏 / 熄屏 / 关闭屏幕 | `wechat-screen-off` | `scripts/turn-off-screen.ps1` |
 | 放歌 / 听歌 / 播放音乐 | `bilibili-music` | B 站搜索 + `Start-Process msedge` 打开 |
+| 解锁 / 解锁屏幕 / 解锁电脑 | `wechat-screen-unlock` | `scripts/unlock-screen.ps1` |
 
 - Match by **meaning** (同义词), not exact keywords — **only you** classify intent.
 - Display类：**加载对应 skill → 发 `WECHAT_PROGRESS` → 一步 bash 跑固定脚本 → 一句收尾**。禁止 read/list/探索/即兴 shell。
@@ -82,3 +83,11 @@ When the user says「刚才」「上一步」, check this table and recent tool 
 - Do **not** use `close-screen.ps1` directly (it forwards to the same script).
 - Script pins `SetThreadExecutionState` (display+system) before `SC_MONITORPOWER`; pairs with `keep-awake.ps1` at bridge startup for S0ix.
 - Output: `WECHAT_OK: 已关闭显示器` → one Chinese closing sentence.
+
+## Screen unlock (canonical script only)
+
+- User says 解锁 / 解锁屏幕 / 解锁电脑 → skill `wechat-screen-unlock` → **only** `scripts/unlock-screen.ps1`
+- **Not** `wechat-screen-on`: 亮屏 only wakes the monitor; unlock types PIN on the lock screen.
+- Flow: `wake-screen.ps1` then `schtasks /RL HIGHEST` + `SendKeys` (lock UI needs high integrity).
+- Password: `%USERPROFILE%\.weclaw\unlock-screen.json` — never in chat, repo, or AGENTS.md.
+- Output: `WECHAT_OK: unlock password sent` → one Chinese closing sentence.
