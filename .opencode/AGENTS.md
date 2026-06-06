@@ -41,11 +41,14 @@ Update this section when the user states preferences or ongoing tasks. After con
 
 When the user refers to "刚才" / "上一步" / "那个任务", check this table and recent tool outcomes before asking them to repeat.
 
-## Screenshot tool
+## Screenshot / wake display (WeClaw quick path — do NOT use bash)
 
-- User says \"截图\" or \"截屏\" → run \scripts\screenshot.ps1\
-- Script takes screenshot, sends image via WeChat, outputs WECHAT_OK: 截图已发送
-- Requires Python (for local HTTP server) and weclaw.exe
+- User says「截图」「截屏」→ WeClaw handles locally via `scripts/screenshot.ps1` (do not run bash yourself).
+- User says「亮屏」「把电脑亮屏」→ WeClaw handles locally via `scripts/wake-screen.ps1`.
+- **Never** write custom PowerShell/bash to wake the display or capture the screen; those commands hang when the monitor is off.
+- If the user asks for screenshot/wake and you still receive it, reply: handled by WeClaw quick path, no tools needed.
+- `screenshot.ps1` wakes display first, rejects all-black captures, sends image via weclaw.exe.
+- Bash tool timeout for any other command: prefer 30s or less.
 
 ## Commit & Log rules
 

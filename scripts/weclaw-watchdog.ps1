@@ -60,7 +60,8 @@ function Get-RecentErrors {
         '本轮处理超时',
         'read loop ended',
         'connection refused.*8080',
-        'everos.*search failed'
+        'everos.*search failed',
+        '\[monitor\] GetUpdates error'
     )
     $errors = @()
     foreach ($line in (Get-RecentLogLines)) {
@@ -89,10 +90,51 @@ function Test-NoReplyStuck {
     if ($age -lt $StuckMinutes) { return $false, '' }
 
     for ($j = $lastReceivedIdx; $j -lt $lines.Count; $j++) {
-        if ($lines[$j] -match '\[sender\] sent reply to') { return $false, '' }
+        if ($lines[$j] -match '\[sender\] sent reply to') {
+            if ($lines[$j] -notmatch '处理中：') { return $false, '' }
+            continue
+        }
+        if ($lines[$j] -match '\[handler\] agent replied') { return $false, '' }
         if ($lines[$j] -match 'Available agents:') { return $false, '' }
     }
     return $true, "no reply for $([math]::Round($age, 1)) min since last received message"
+}
+
+function Test-GetUpdatesErrors {
+    param([int]$WindowMinutes = 10, [int]$MinCount = 3)
+    $cutoff = (Get-Date).AddMinutes(-$WindowMinutes)
+    $count = 0
+    foreach ($line in (Get-RecentLogLines -Tail 500)) {
+        $ts = Parse-LogTimestamp $line
+        if ($ts -and $ts -lt $cutoff) { continue }
+        if ($line -match '\[monitor\] GetUpdates error') { $count++ }
+    }
+    if ($count -ge $MinCount) {
+        return $true, "GetUpdates errors=$count in last ${WindowMinutes}m"
+    }
+    return $false, ''
+}
+
+function Test-ToolHangStuck {
+    param([int]$HangMinutes = 3)
+    $lines = Get-RecentLogLines -Tail 500
+    $lastTool = $null
+    for ($i = $lines.Count - 1; $i -ge 0; $i--) {
+        if ($lines[$i] -match '\[acp\] session/update.*type=tool_call') {
+            $lastTool = Parse-LogTimestamp $lines[$i]
+            break
+        }
+    }
+    if (-not $lastTool) { return $false, '' }
+    $age = ((Get-Date) - $lastTool).TotalMinutes
+    if ($age -lt $HangMinutes) { return $false, '' }
+    for ($i = $lines.Count - 1; $i -ge 0; $i--) {
+        $ts = Parse-LogTimestamp $lines[$i]
+        if ($ts -and $ts -lt $lastTool) { break }
+        if ($lines[$i] -match '\[acp\] prompt result') { return $false, '' }
+        if ($lines[$i] -match '\[handler\] agent replied') { return $false, '' }
+    }
+    return $true, "tool hang ${HangMinutes}m+ without prompt result"
 }
 
 function Test-EverOSHealthy {
@@ -121,8 +163,10 @@ function Test-Healthy {
     $acpAlive = Test-ProcessAlive $acpPid
     $errors = Get-RecentErrors
     $stuck, $stuckReason = Test-NoReplyStuck
+    $getUpdatesStuck, $getUpdatesReason = Test-GetUpdatesErrors
+    $toolHang, $toolHangReason = Test-ToolHangStuck
 
-    Write-Log "check: weclaw=$weclawOk everos=$everosOk acp_log_pid=$acpPid acp_alive=$acpAlive recent_errors=$($errors.Count) stuck=$stuck"
+    Write-Log "check: weclaw=$weclawOk everos=$everosOk acp_log_pid=$acpPid acp_alive=$acpAlive recent_errors=$($errors.Count) stuck=$stuck getupdates=$getUpdatesStuck toolhang=$toolHang"
 
     if (-not $weclawOk) { return $false, 'weclaw not running' }
     if (-not $everosOk) {
@@ -133,6 +177,8 @@ function Test-Healthy {
         }
     }
     if ($stuck) { return $false, $stuckReason }
+    if ($getUpdatesStuck) { return $false, $getUpdatesReason }
+    if ($toolHang) { return $false, $toolHangReason }
     if ($errors.Count -ge $ErrorThreshold) {
         return $false, "$($errors.Count) errors in last ${ErrorWindowMinutes}m"
     }

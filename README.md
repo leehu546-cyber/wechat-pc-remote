@@ -24,3 +24,4 @@ scripts\status.ps1
 - ~/.weclaw/config.json — weclaw 配置
 - ~/.config/opencode/opencode.json — opencode 模型配置
 - 智谱AI API Key 保存在 opencode auth
+- 常开 VPN 时见 [docs/weclaw-vpn.md](docs/weclaw-vpn.md)（iLink 需直连）

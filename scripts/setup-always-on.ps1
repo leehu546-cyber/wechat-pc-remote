@@ -10,16 +10,17 @@ Write-Host ""
 # --- 1. Power: never sleep on AC ---
 Write-Host "[1/7] Power settings..." -ForegroundColor Yellow
 powercfg /change standby-timeout-ac 0
-powercfg /change monitor-timeout-ac 30
+powercfg /change monitor-timeout-ac 0
 powercfg /SETACVALUEINDEX SCHEME_CURRENT SUB_SLEEP HYBRIDSLEEP 0
 powercfg /SETACVALUEINDEX SCHEME_CURRENT SUB_SLEEP HIBERNATEIDLE 0
-powercfg /change standby-timeout-dc 60
-powercfg /change monitor-timeout-dc 10
+powercfg /SETACVALUEINDEX SCHEME_CURRENT SUB_SLEEP AWAYMODE 0
+powercfg /change standby-timeout-dc 0
+powercfg /change monitor-timeout-dc 0
 powercfg /SETDCVALUEINDEX SCHEME_CURRENT SUB_SLEEP HYBRIDSLEEP 0
 powercfg -SETACVALUEINDEX SCHEME_CURRENT SUB_BUTTONS LIDACTION 0
 powercfg -SETDCVALUEINDEX SCHEME_CURRENT SUB_BUTTONS LIDACTION 1
 powercfg -SETACTIVE SCHEME_CURRENT
-Write-Host "      AC: never sleep | Lid closed on AC: stay awake" -ForegroundColor Green
+Write-Host "      AC/DC: never sleep | monitor never off (WeChat remote control)" -ForegroundColor Green
 
 # --- 2. Network adapter: disable power saving ---
 Write-Host "[2/7] Network adapter power saving..." -ForegroundColor Yellow
