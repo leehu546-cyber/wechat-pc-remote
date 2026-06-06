@@ -1,0 +1,17 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "model": "deepseek/deepseek-v4-flash",
+  "permission": {
+    "skill": "allow",
+    "doom_loop": "ask"
+  },
+  "agent": {
+    "build": {
+      "steps": 10,
+      "permission": {
+        "skill": "allow",
+        "doom_loop": "ask"
+      }
+    }
+  }
+}

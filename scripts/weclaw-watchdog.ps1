@@ -204,6 +204,9 @@ function Test-ToolHangStuck {
 
     $lastTool = $null
     for ($i = $lines.Count - 1; $i -ge 0; $i--) {
+        if ($lines[$i] -match 'doom_loop rejected|brain stall assessment|loop assessment nudge') {
+            return $false, ''
+        }
         if ($lines[$i] -match 'type=tool_call' -and $lines[$i] -notmatch 'tool_call_update') {
             $ts = Parse-LogTimestamp $lines[$i]
             if ($bridgeStart -and $ts -and $ts -lt $bridgeStart) { continue }

@@ -21,24 +21,23 @@ New-Item -ItemType Directory -Path $weclawDir -Force | Out-Null
 $cmdEscaped = $opencodeCmd -replace '\\', '\\'
 $workEscaped = $workDir -replace '\\', '\\'
 $prompt = @(
-    'WeChat agent: always end with one concise Chinese reply (max 120 chars) after tools.',
-    'Never finish with only tool calls. Say WECHAT_OK: <summary> when a PC task completes.',
-    'After any tool use, reply in one short Chinese sentence summarizing the outcome.',
-    'Scripts must exit within 30s; NEVER while True. Prefer Start-Process msedge URL.',
-    'Selenium detach: no driver.quit() in finally. Read .opencode/AGENTS.md in project.'
+    'You are the WeChat remote-control brain. Read .opencode/AGENTS.md and use skills for PC actions.',
+    'Multi-step: emit WECHAT_PROGRESS: <step in Chinese> before/after tools.',
+    'After tools: one concise Chinese reply (max 120 chars). Judge loops yourself; stop tools and ask user to retry or /new.',
+    'Scripts exit within 30s. Prefer skills + scripts/*.ps1 for display/screenshot.'
 ) -join ' '
 
 $utf8NoBom = New-Object System.Text.UTF8Encoding $false
 
 $defaultProgress = @{
     enabled         = $true
-    mode            = "minimal"
+    mode            = "brain"
     interval_sec    = 30
-    max_messages    = 3
-    start_delay_sec = 30
+    max_messages    = 5
+    start_delay_sec = 15
 }
 $defaultRouting = @{
-    simple_bypass   = $true
+    simple_bypass   = $false
     cancel_previous = $true
 }
 $defaultMemory = @{
@@ -57,21 +56,22 @@ if (Test-Path $configPath) {
     if (-not $cfg.default_agent) { $cfg.default_agent = "opencode" }
     if (-not $cfg.progress) {
         $cfg | Add-Member -NotePropertyName progress -NotePropertyValue ([pscustomobject]$defaultProgress)
-    } elseif (-not $cfg.progress.mode) {
-        $cfg.progress | Add-Member -NotePropertyName mode -NotePropertyValue "minimal" -Force
-        $cfg.progress | Add-Member -NotePropertyName enabled -NotePropertyValue $true -Force
-        $cfg.progress | Add-Member -NotePropertyName start_delay_sec -NotePropertyValue 30 -Force
-        $cfg.progress | Add-Member -NotePropertyName interval_sec -NotePropertyValue 30 -Force
-        if (-not $cfg.progress.max_messages) {
-            $cfg.progress | Add-Member -NotePropertyName max_messages -NotePropertyValue 3 -Force
-        }
-        Write-Host "Upgraded progress to mode=minimal (30s delay)" -ForegroundColor Yellow
+    }
+    if ($cfg.progress.mode -ne "brain") {
+        $cfg.progress | Add-Member -NotePropertyName mode -NotePropertyValue "brain" -Force
+        Write-Host "Upgraded progress.mode → brain (API WECHAT_PROGRESS only)" -ForegroundColor Yellow
     }
     if (-not $cfg.routing) {
         $cfg | Add-Member -NotePropertyName routing -NotePropertyValue ([pscustomobject]$defaultRouting)
-    } elseif (-not $cfg.routing.cancel_previous) {
-        $cfg.routing | Add-Member -NotePropertyName cancel_previous -NotePropertyValue $true -Force
-        Write-Host "Upgraded routing.cancel_previous false→true (session/cancel + watchdog)" -ForegroundColor Yellow
+    } else {
+        if ($cfg.routing.simple_bypass -ne $false) {
+            $cfg.routing | Add-Member -NotePropertyName simple_bypass -NotePropertyValue $false -Force
+            Write-Host "Upgraded routing.simple_bypass → false (thin bridge, brain routes all)" -ForegroundColor Yellow
+        }
+        if (-not $cfg.routing.cancel_previous) {
+            $cfg.routing | Add-Member -NotePropertyName cancel_previous -NotePropertyValue $true -Force
+            Write-Host "Upgraded routing.cancel_previous false→true" -ForegroundColor Yellow
+        }
     }
     if (-not $cfg.memory) {
         $cfg | Add-Member -NotePropertyName memory -NotePropertyValue ([pscustomobject]$defaultMemory)
@@ -98,6 +98,7 @@ if (Test-Path $configPath) {
         if (-not $cfg.agents.opencode.model) {
             $cfg.agents.opencode | Add-Member -NotePropertyName model -NotePropertyValue $model -Force
         }
+        $cfg.agents.opencode | Add-Member -NotePropertyName system_prompt -NotePropertyValue $prompt -Force
     }
     $json = $cfg | ConvertTo-Json -Depth 6
     [System.IO.File]::WriteAllText($configPath, $json, $utf8NoBom)
@@ -162,7 +163,8 @@ Write-Host "  default_agent: opencode"
 Write-Host "  model: $model"
 Write-Host "  cwd: $workDir"
 Write-Host "  progress: mode=$($defaultProgress.mode), enabled=$($defaultProgress.enabled), start_delay=$($defaultProgress.start_delay_sec)s"
-Write-Host "  routing.cancel_previous: $($defaultRouting.cancel_previous) (session/cancel patch + WeClawWatchdog)"
+Write-Host "  routing.simple_bypass: $($defaultRouting.simple_bypass) (thin bridge)"
+Write-Host "  routing.cancel_previous: $($defaultRouting.cancel_previous)"
 Write-Host "  memory.everos: enabled=$($defaultMemory.everos.enabled), base=$($defaultMemory.everos.base_url)"
 Write-Host ""
 Write-Host "Next: weclaw start (scan QR on first run)" -ForegroundColor Cyan
