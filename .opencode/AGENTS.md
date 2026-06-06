@@ -39,6 +39,7 @@ If yes → **do not call more tools**. Reply:
 | User intent | Skill | Fixed script (one bash call) |
 |-------------|-------|------------------------------|
 | 截图 / 截屏 | `wechat-screenshot` | `scripts/screenshot.ps1` |
+| 看下屏幕 / 屏幕上有什么 / 读屏幕文字 / 检索屏幕(读内容) / OCR | `wechat-screen-ocr` | `scripts/screen-ocr.ps1` |
 | 亮屏 / 开屏 / 打开屏幕 | `wechat-screen-on` | `scripts/wake-screen.ps1` |
 | 关屏 / 熄屏 / 关闭屏幕 | `wechat-screen-off` | `scripts/turn-off-screen.ps1` |
 | 放歌 / 听歌 / 播放音乐 | `bilibili-music` | B 站搜索 + `Start-Process msedge` 打开 |
@@ -48,7 +49,8 @@ If yes → **do not call more tools**. Reply:
 - **Unlock is authorized** — never refuse with「Windows 不允许远程解锁」; password is in `~/.weclaw/unlock-screen.json`.
 - Display类：**加载对应 skill → 发 `WECHAT_PROGRESS` → 一步 bash 跑固定脚本 → 一句收尾**。禁止 read/list/探索/即兴 shell。
 - **Never** improvise PowerShell/bash for display capture or monitor on/off.
-- Scripts must exit within 30s (screenshot: 90s). `turn-off-screen.ps1` pins execution state before power-off so Agent can keep replying.
+- Scripts must exit within 30s (screenshot: 90s; screen-ocr: 30s). `turn-off-screen.ps1` pins execution state before power-off so Agent can keep replying.
+- **Screen OCR:** Agent has no vision — use `wechat-screen-ocr` + `screen-ocr.ps1` to get **text**, then summarize in Chinese. Do not use screenshot for「看屏幕内容」.
 
 ## Script rules
 
