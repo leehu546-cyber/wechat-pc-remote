@@ -82,7 +82,12 @@ function Test-IsScreenshotOrWakeMessage([string]$Msg) {
         [char]0x4EAE + [char]0x5C4F,
         [char]0x5524 + [char]0x9192 + [char]0x5C4F + [char]0x5E55,
         [char]0x70B9 + [char]0x4EAE + [char]0x5C4F + [char]0x5E55,
-        [char]0x5F00 + [char]0x5C4F
+        [char]0x5F00 + [char]0x5C4F,
+        [char]0x6253 + [char]0x5F00 + [char]0x5C4F + [char]0x5E55,
+        [char]0x5173 + [char]0x5C4F,
+        [char]0x7184 + [char]0x5C4F,
+        [char]0x5173 + [char]0x95ED + [char]0x5C4F + [char]0x5E55,
+        [char]0x5C4F + [char]0x5E55 + [char]0x5173 + [char]0x95ED
     )
     foreach ($k in $keys) { if ($Msg.Contains($k)) { return $true } }
     return $false
@@ -92,7 +97,7 @@ function Test-LocalQuickScriptRunning {
     foreach ($proc in Get-Process -Name powershell,pwsh,python -ErrorAction SilentlyContinue) {
         try {
             $cmd = (Get-CimInstance Win32_Process -Filter "ProcessId=$($proc.Id)" -ErrorAction SilentlyContinue).CommandLine
-            if ($cmd -match 'screenshot\.ps1|wake-screen\.ps1|wake-display\.py') {
+            if ($cmd -match 'screenshot\.ps1|wake-screen\.ps1|turn-off-screen\.ps1|wake-display\.py') {
                 return $true, "local script running (pid=$($proc.Id))"
             }
         } catch { }
