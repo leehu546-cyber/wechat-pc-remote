@@ -13,12 +13,12 @@ if (-not (Test-Path $dir)) { New-Item -ItemType Directory -Path $dir -Force | Ou
 
 if (-not $SkipWake -and (Test-Path $wakeScript)) {
     & $wakeScript | Out-Null
-    Start-Sleep -Seconds 1
+    Start-Sleep -Milliseconds 500
 }
 
 Get-Process -Name python -ErrorAction SilentlyContinue | ForEach-Object {
     $cmd = (Get-CimInstance Win32_Process -Filter "ProcessId=$($_.Id)" -ErrorAction SilentlyContinue).CommandLine
-    if ($cmd -and $cmd -match "http.server") { Stop-Process -Id $_.Id -Force }
+    if ($cmd -and $cmd -match "http\.server") { Stop-Process -Id $_.Id -Force -ErrorAction SilentlyContinue }
 }
 
 function Test-BitmapMostlyBlack([System.Drawing.Bitmap]$bmp) {
@@ -62,25 +62,16 @@ $filePath = Join-Path $dir "ss_$ts.png"
 $bitmap.Save($filePath, [System.Drawing.Imaging.ImageFormat]::Png)
 $bitmap.Dispose()
 
-$port = 18090
-$maxPort = 18120
-while ($port -le $maxPort) {
-    $inUse = Get-NetTCPConnection -LocalPort $port -ErrorAction SilentlyContinue
-    if (-not $inUse) { break }
-    $port++
-}
-if ($port -gt $maxPort) {
-    Write-Host "WECHAT_FAIL: 无法分配本地 HTTP 端口"
-    exit 1
-}
+# Fast port pick — avoid slow Get-NetTCPConnection scan
+$port = 18090 + ($PID % 30)
 $proc = Start-Process python -ArgumentList "-m http.server $port --directory `"$dir`"" -WindowStyle Hidden -PassThru
-Start-Sleep 2
+Start-Sleep -Milliseconds 800
 
 $url = "http://127.0.0.1:$port/ss_$ts.png"
 $result = & $weclaw send --to $user --text "[screenshot]" --media $url 2>&1
 Write-Host $result
 
-Start-Sleep 8
+Start-Sleep -Seconds 2
 Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue
 
 if ($result -match "Error|error|fail") {

@@ -62,6 +62,14 @@ function Resolve-IlinkIPs {
     return @($ips) | Sort-Object
 }
 
+# Tencent CDN ranges used by ilinkai (covers IP rotation in global+TUN mode)
+$extraCidrs = @(
+    "43.163.0.0/16"
+    "36.155.0.0/16"
+    "120.204.0.0/16"
+    "183.192.0.0/16"
+)
+
 function Write-IplinkIpYaml {
     param([string[]]$IPs, [string]$Path)
     $lines = @(
@@ -72,13 +80,18 @@ function Write-IplinkIpYaml {
     foreach ($ip in $IPs) {
         $lines += "  - IP-CIDR,$ip/32,no-resolve"
     }
+    foreach ($cidr in $extraCidrs) {
+        $lines += "  - IP-CIDR,$cidr,no-resolve"
+    }
     $utf8 = New-Object System.Text.UTF8Encoding $false
     [IO.File]::WriteAllText($Path, ($lines -join "`n") + "`n", $utf8)
 }
 
 function Write-GuardOverrides {
     param([string[]]$IPs, [string]$Path)
-    $routeLines = $IPs | ForEach-Object { "    - $_/32" }
+    $routeLines = @()
+    foreach ($ip in $IPs) { $routeLines += "    - $ip/32" }
+    foreach ($cidr in $extraCidrs) { $routeLines += "    - $cidr" }
     $yaml = @"
 # WeClaw / WeChat iLink bypass — persists across subscription reload
 # Global mode: tun.route-exclude-address bypasses proxy; rule mode: prepend-rules DIRECT
@@ -240,9 +253,39 @@ Write-Host "[ok] weclaw-ilink-ip.yaml ($($ips.Count) IPs)" -ForegroundColor Gree
 Ensure-MergeProfileChain -ProfilesPath $profilesYaml -RemoteUid "rRA15xPaMFSb" -MergeUid $mergeUid
 Write-Host "[ok] profiles.yaml merge chain" -ForegroundColor Green
 
+# Sync Windows system proxy bypass (used when system proxy enabled)
+try {
+    $bypassReg = "$bypass;<local>"
+    Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Internet Settings" `
+        -Name ProxyOverride -Value $bypassReg -ErrorAction Stop
+    Write-Host "[ok] Windows ProxyOverride registry" -ForegroundColor Green
+} catch {
+    Write-Warning "ProxyOverride registry: $_"
+}
+
+# Touch clash-config to nudge Nyanpasu reload on next open
+try {
+    if (Test-Path $clashConfig) {
+        (Get-Item $clashConfig).LastWriteTime = Get-Date
+    }
+} catch { }
+
+# Try Mihomo external-controller reload
+$secret = "4151d0ff-5828-4e88-9cee-9f933daa8e0f"
+$reloaded = $false
+foreach ($port in @(17650, 9090)) {
+    try {
+        $h = @{ Authorization = "Bearer $secret" }
+        Invoke-RestMethod -Uri "http://127.0.0.1:${port}/configs" -Headers $h -Method PUT `
+            -Body '{"payload":"reload"}' -ContentType "application/json" -TimeoutSec 5 | Out-Null
+        Write-Host "[ok] Clash API reload on port $port" -ForegroundColor Green
+        $reloaded = $true
+        break
+    } catch { }
+}
+if (-not $reloaded) {
+    Write-Host "[..] Clash API reload skipped — please reload profile in Nyanpasu UI" -ForegroundColor Yellow
+}
+
 Write-Host ""
-Write-Host "Next steps:" -ForegroundColor Cyan
-Write-Host "  1. Clash Nyanpasu -> Reload profile (or restart app)"
-Write-Host "  2. Enable TUN + Global mode"
-Write-Host "  3. D:\cursor\61\scripts\restart-weclaw.ps1"
-Write-Host "  4. Check weclaw.log for no GetUpdates error with 172.19.x.x"
+Write-Host "Next: restart weclaw if needed — D:\cursor\61\scripts\restart-weclaw.ps1" -ForegroundColor Cyan
