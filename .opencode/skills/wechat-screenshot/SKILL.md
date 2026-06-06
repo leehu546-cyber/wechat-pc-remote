@@ -1,3 +1,8 @@
+---
+name: wechat-screenshot
+description: Use when the user says 截图 or 截屏 to take a screenshot and send it via WeChat.
+---
+
 # 微信截图发送 (WeChat Screenshot)
 
 ## 触发词
