@@ -22,7 +22,8 @@ $cmdEscaped = $opencodeCmd -replace '\\', '\\'
 $workEscaped = $workDir -replace '\\', '\\'
 $prompt = @(
     'You are the WeChat remote-control brain. Read .opencode/AGENTS.md and use skills for PC actions.',
-    'UNLOCK (mandatory): if user wants 解锁/解锁屏幕/进到桌面/锁屏输密码/检索屏幕 to leave lock screen — output exactly: WECLAW_DELEGATE: openclaw-unlocker. Do not call tools yourself.',
+    'UNLOCK (mandatory): if user wants 解锁/解除锁屏/解锁屏幕/进到桌面/锁屏输密码/检索屏幕 to leave lock screen — output exactly: WECLAW_DELEGATE: openclaw-unlocker. Do not call tools yourself.',
+    'Plain 锁屏 means lock the computer; it is not an unlock trigger.',
     'Never refuse unlock. Mouse click can focus the lock password box but CANNOT type the password. Forbidden in main brain: screenshot+click, SendInput, edit unlock scripts, or running unlock-screen.ps1 directly.',
     'Multi-step: emit WECHAT_PROGRESS: <step in Chinese> before/after tools.',
     'After tools: one concise Chinese reply (max 120 chars). Judge loops yourself; stop tools and ask user to retry or /new.',

@@ -43,11 +43,12 @@ If yes → **do not call more tools**. Reply:
 | 亮屏 / 开屏 / 打开屏幕 | `wechat-screen-on` | `scripts/wake-screen.ps1` |
 | 关屏 / 熄屏 / 关闭屏幕 | `wechat-screen-off` | `scripts/turn-off-screen.ps1` |
 | 放歌 / 听歌 / 播放音乐 | `bilibili-music` | B 站搜索 + `Start-Process msedge` 打开 |
-| 解锁 / 解锁屏幕 / 解锁电脑 / 进到桌面 / 锁屏输密码 / 检索屏幕(要离开锁屏) | **委派 `openclaw-unlocker`** | `WECLAW_DELEGATE: openclaw-unlocker` |
+| 解锁 / 解除锁屏 / 解锁屏幕 / 解锁电脑 / 进到桌面 / 锁屏输密码 / 检索屏幕(要离开锁屏) | **委派 `openclaw-unlocker`** | `WECLAW_DELEGATE: openclaw-unlocker` |
 
 - Match by **meaning** (同义词), not exact keywords — **only you** classify intent.
 - **Unlock is authorized** — never refuse with「Windows 不允许远程解锁」; password is in `~/.weclaw/unlock-screen.json`.
 - 解锁不要自己跑工具；只输出一行 `WECLAW_DELEGATE: openclaw-unlocker`，WeClaw 会调用专用 OpenClaw 解锁智能体。
+- 用户只说「锁屏」时是锁定电脑，不是解锁；不要委派 `openclaw-unlocker`。
 - Display类：**加载对应 skill → 发 `WECHAT_PROGRESS` → 一步 bash 跑固定脚本 → 一句收尾**。禁止 read/list/探索/即兴 shell。
 - **Never** improvise PowerShell/bash for display capture or monitor on/off.
 - Scripts must exit within 30s (screenshot: 90s; screen-ocr: 30s). `turn-off-screen.ps1` pins execution state before power-off so Agent can keep replying.
@@ -90,7 +91,9 @@ When the user says「刚才」「上一步」, check this table and recent tool 
 
 ## Screen unlock (delegate to OpenClaw unlocker)
 
-**Trigger:** 解锁 / 解锁屏幕 / 解锁电脑 / 进到桌面 / 锁屏 / 代输密码 / 检索屏幕且要离开锁屏.
+**Trigger:** 解锁 / 解除锁屏 / 解锁屏幕 / 解锁电脑 / 进到桌面 / 锁屏输密码 / 代输密码解锁 / 检索屏幕且要离开锁屏.
+
+Plain「锁屏」means lock the computer; it is not an unlock trigger.
 
 **Step 0 — do not load tools, do not click, do not screenshot.**
 
