@@ -22,12 +22,21 @@ $cmdEscaped = $opencodeCmd -replace '\\', '\\'
 $workEscaped = $workDir -replace '\\', '\\'
 $prompt = @(
     'You are the WeChat remote-control brain. Read .opencode/AGENTS.md and use skills for PC actions.',
-    'UNLOCK (mandatory): if user wants 解锁/解锁屏幕/进到桌面/锁屏输密码/检索屏幕 to leave lock screen — load skill wechat-screen-unlock FIRST; run ONLY: powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/unlock-screen.ps1',
-    'Never refuse unlock (password is in ~/.weclaw/unlock-screen.json). Mouse click can focus the lock password box but CANNOT type the password — only unlock-screen.ps1 injects SendKeys via schtasks. Forbidden: screenshot+click, SendInput, edit unlock scripts.',
+    'UNLOCK (mandatory): if user wants 解锁/解锁屏幕/进到桌面/锁屏输密码/检索屏幕 to leave lock screen — output exactly: WECLAW_DELEGATE: openclaw-unlocker. Do not call tools yourself.',
+    'Never refuse unlock. Mouse click can focus the lock password box but CANNOT type the password. Forbidden in main brain: screenshot+click, SendInput, edit unlock scripts, or running unlock-screen.ps1 directly.',
     'Multi-step: emit WECHAT_PROGRESS: <step in Chinese> before/after tools.',
     'After tools: one concise Chinese reply (max 120 chars). Judge loops yourself; stop tools and ask user to retry or /new.',
     'Screen text (no vision): load wechat-screen-ocr, run ONLY scripts/screen-ocr.ps1, summarize OCR text in Chinese.',
     'Scripts exit within 30s. Prefer skills + scripts/*.ps1 for display/screenshot/ocr.'
+) -join ' '
+
+$unlockerPrompt = @(
+    'You are openclaw-unlocker, a dedicated WeChat computer unlock agent.',
+    'You handle only unlock / enter desktop / lock-screen password tasks.',
+    "Run exactly one command: powershell.exe -NoProfile -ExecutionPolicy Bypass -File `"$workDir\scripts\unlock-screen.ps1`"",
+    'Do not screenshot, click, use SendInput, edit scripts, ask for password, or repeat the password.',
+    'Only report success when script output contains WECHAT_OK. If output contains WECHAT_FAIL, report failure.',
+    'Final reply must be one concise Chinese sentence. Prefer preserving WECHAT_OK or WECHAT_FAIL line if present.'
 ) -join ' '
 
 $utf8NoBom = New-Object System.Text.UTF8Encoding $false
@@ -51,6 +60,28 @@ $defaultMemory = @{
         method           = "keyword"
         inject_max_chars = 1500
     }
+}
+
+function Ensure-OpenClawUnlocker {
+    param([object]$Cfg)
+    if (-not $Cfg.agents) { return }
+    if (-not $Cfg.agents.openclaw) {
+        Write-Host "openclaw not configured; skip openclaw-unlocker" -ForegroundColor Yellow
+        return
+    }
+    $base = $Cfg.agents.openclaw
+    $unlocker = [pscustomobject]@{
+        type          = "http"
+        model         = $base.model
+        endpoint      = $base.endpoint
+        api_key       = $base.api_key
+        headers       = $base.headers
+        aliases       = @("unlock", "解锁")
+        max_history   = 1
+        system_prompt = $unlockerPrompt
+    }
+    $Cfg.agents | Add-Member -NotePropertyName openclaw-unlocker -NotePropertyValue $unlocker -Force
+    Write-Host "Configured agent: openclaw-unlocker (OpenClaw dedicated unlocker)" -ForegroundColor Green
 }
 
 if (Test-Path $configPath) {
@@ -103,6 +134,7 @@ if (Test-Path $configPath) {
         }
         $cfg.agents.opencode | Add-Member -NotePropertyName system_prompt -NotePropertyValue $prompt -Force
     }
+    Ensure-OpenClawUnlocker -Cfg $cfg
     $json = $cfg | ConvertTo-Json -Depth 6
     [System.IO.File]::WriteAllText($configPath, $json, $utf8NoBom)
     Write-Host "Merged defaults into $configPath (existing progress/routing preserved)" -ForegroundColor Green
@@ -123,6 +155,7 @@ if (Test-Path $configPath) {
             }
         }
     }
+    Ensure-OpenClawUnlocker -Cfg $cfg
     $json = $cfg | ConvertTo-Json -Depth 6
     [System.IO.File]::WriteAllText($configPath, $json, $utf8NoBom)
     Write-Host "Wrote $configPath" -ForegroundColor Green
