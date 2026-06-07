@@ -29,6 +29,7 @@ This PC is the user's Windows workstation. Assume the user wants practical local
 | `wechat-screen-off` | 关屏 / 熄屏 / 关闭显示器 | One call: `scripts/turn-off-screen.ps1` |
 | `wechat-screen-unlock` | 解锁 / 进桌面 / 锁屏输密码 | Do not use screenshots or clicks; output `WECLAW_DELEGATE: openclaw-unlocker`. |
 | `bilibili-music` | 放歌 / 听歌 / 搜歌播放 | Search Bilibili, then play with `scripts/bilibili-play.ps1`. |
+| `wechat-task-orchestrator` | 复合电脑控制任务 / 需要打开给我看 / 发截图确认 / 检查是否成功 | Brain-only Plan -> Act -> Verify -> Report collaboration protocol. |
 | fixed file opener | 打开这个文件 / 打开 Word / 打开 markdown / 打开刚才文档 | One call: `scripts/open-file-fast.ps1` with `-Kind word`, `-Kind markdown`, or default. |
 
 ## Local decision rule
@@ -37,6 +38,41 @@ This PC is the user's Windows workstation. Assume the user wants practical local
 - For display, screenshot, OCR, unlock, music, and file-open tasks: do not list directories, read many files, or invent new PowerShell. Use the fixed script/protocol above.
 - For generated files: put ordinary project docs in `D:\cursor\61`; if the user wants to see them, open via `scripts/open-file-fast.ps1`.
 - For "刚才/这个/上一步": prefer the most recent generated/opened file or the task context; if unsure, open the latest matching file from desktop/workspace using the fixed opener.
+- For compound PC-control tasks, load `wechat-task-orchestrator` first and run the task as Plan -> Act -> Verify -> Report. Word/WPS, browser, file, music, screen, and app-control tasks all use the same collaboration pattern.
+
+## Multi-agent collaboration pattern (brain-only)
+
+The main brain is the only decision maker. The bridge must stay thin; do not assume WeClaw will classify natural-language intents for you. Other agents/skills/scripts are domain workers that execute your decisions and return results.
+
+Use this protocol for every compound task and for any request that asks to "open it for me", "show me", "send a screenshot", "confirm", "check whether it succeeded", or combines multiple actions:
+
+1. **Plan**: classify the task domain, choose the worker roles, and decide the minimum steps. For visible multi-step work, emit `WECHAT_PROGRESS: 正在制定执行步骤`.
+2. **Act**: call only the selected domain skill/script/tool for each step. Emit `WECHAT_PROGRESS: 正在执行第N步` before important steps.
+3. **Verify**: when the user asks to see/confirm, or when the action affects a GUI, run the appropriate verification worker: screenshot, OCR, file existence, process/window check, or script output inspection. Emit `WECHAT_PROGRESS: 正在验证结果`.
+4. **Report**: reply in one concise Chinese sentence with the verified outcome or the first clear failure.
+
+Worker roles are capability domains, not independent decision makers:
+
+| Role | Scope | Canonical tools |
+|------|-------|-----------------|
+| FileAgent | create/find/open/move files | PowerShell file ops, `scripts/open-file-fast.ps1` |
+| DesktopAgent | foreground apps/windows and visible desktop state | fixed scripts or simple `Start-Process` |
+| DocumentAgent | Word/WPS/Markdown/PDF document tasks | doc creation scripts, then file opener |
+| BrowserAgent | open/search/play/navigate browser tasks | Edge URLs, Bilibili skill/script |
+| ScreenAgent | wake/sleep/screenshot/OCR/unlock | screen skills, `WECLAW_DELEGATE` for unlock |
+| VerifierAgent | prove result or detect failure | screenshot, OCR, file/process/window checks |
+| ReporterAgent | final WeChat wording | one concise Chinese reply |
+
+Script and worker outputs should be interpreted using this protocol:
+
+| Prefix | Meaning |
+|--------|---------|
+| `WECHAT_OK:` | Step succeeded; continue or report. |
+| `WECHAT_FAIL:` | Step failed; stop repeated attempts and report the reason. |
+| `WECHAT_NEED_CONFIRM:` | Ask the user for the needed confirmation. |
+| `WECHAT_ARTIFACT:` | Remember this absolute artifact path for later open/verify steps. |
+
+Do not ask the user to send a second command when the original request already includes the full chain. Example: if the user says "write a document, open it, and send a screenshot", complete all three steps in the same task.
 
 ## Mandatory reply rules
 
