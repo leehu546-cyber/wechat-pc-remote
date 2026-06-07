@@ -31,15 +31,6 @@ $prompt = @(
     'Scripts exit within 30s. Prefer skills + scripts/*.ps1 for display/screenshot/ocr.'
 ) -join ' '
 
-$unlockerPrompt = @(
-    'You are openclaw-unlocker, a dedicated WeChat computer unlock agent.',
-    'You handle only unlock / enter desktop / lock-screen password tasks.',
-    "Run exactly one command: powershell.exe -NoProfile -ExecutionPolicy Bypass -File `"$workDir\scripts\unlock-screen.ps1`"",
-    'Do not screenshot, click, use SendInput, edit scripts, ask for password, or repeat the password.',
-    'Only report success when script output contains WECHAT_OK. If output contains WECHAT_FAIL, report failure.',
-    'Final reply must be one concise Chinese sentence. Prefer preserving WECHAT_OK or WECHAT_FAIL line if present.'
-) -join ' '
-
 $utf8NoBom = New-Object System.Text.UTF8Encoding $false
 
 $defaultProgress = @{
@@ -62,27 +53,28 @@ $defaultMemory = @{
         inject_max_chars = 1500
     }
 }
+$defaultUnlocker = @{
+    script_path = (Join-Path $workDir "scripts\unlock-screen.ps1")
+    timeout_sec = 45
+}
 
-function Ensure-OpenClawUnlocker {
+function Ensure-LocalUnlocker {
     param([object]$Cfg)
-    if (-not $Cfg.agents) { return }
-    if (-not $Cfg.agents.openclaw) {
-        Write-Host "openclaw not configured; skip openclaw-unlocker" -ForegroundColor Yellow
-        return
+    if ($Cfg.agents -and $Cfg.agents.PSObject.Properties.Name -contains "openclaw-unlocker") {
+        $Cfg.agents.PSObject.Properties.Remove("openclaw-unlocker")
+        Write-Host "Removed legacy HTTP agent: openclaw-unlocker" -ForegroundColor Yellow
     }
-    $base = $Cfg.agents.openclaw
-    $unlocker = [pscustomobject]@{
-        type          = "http"
-        model         = $base.model
-        endpoint      = $base.endpoint
-        api_key       = $base.api_key
-        headers       = $base.headers
-        aliases       = @("unlock", "解锁")
-        max_history   = 1
-        system_prompt = $unlockerPrompt
+    if (-not $Cfg.unlocker) {
+        $Cfg | Add-Member -NotePropertyName unlocker -NotePropertyValue ([pscustomobject]$defaultUnlocker)
+    } else {
+        if (-not $Cfg.unlocker.script_path) {
+            $Cfg.unlocker | Add-Member -NotePropertyName script_path -NotePropertyValue $defaultUnlocker.script_path -Force
+        }
+        if (-not $Cfg.unlocker.timeout_sec) {
+            $Cfg.unlocker | Add-Member -NotePropertyName timeout_sec -NotePropertyValue $defaultUnlocker.timeout_sec -Force
+        }
     }
-    $Cfg.agents | Add-Member -NotePropertyName openclaw-unlocker -NotePropertyValue $unlocker -Force
-    Write-Host "Configured agent: openclaw-unlocker (OpenClaw dedicated unlocker)" -ForegroundColor Green
+    Write-Host "Configured local unlocker: $($Cfg.unlocker.script_path)" -ForegroundColor Green
 }
 
 if (Test-Path $configPath) {
@@ -135,7 +127,7 @@ if (Test-Path $configPath) {
         }
         $cfg.agents.opencode | Add-Member -NotePropertyName system_prompt -NotePropertyValue $prompt -Force
     }
-    Ensure-OpenClawUnlocker -Cfg $cfg
+    Ensure-LocalUnlocker -Cfg $cfg
     $json = $cfg | ConvertTo-Json -Depth 6
     [System.IO.File]::WriteAllText($configPath, $json, $utf8NoBom)
     Write-Host "Merged defaults into $configPath (existing progress/routing preserved)" -ForegroundColor Green
@@ -145,6 +137,7 @@ if (Test-Path $configPath) {
         progress      = $defaultProgress
         routing       = $defaultRouting
         memory        = $defaultMemory
+        unlocker      = $defaultUnlocker
         agents        = [ordered]@{
             opencode = [ordered]@{
                 type          = "acp"
@@ -156,7 +149,7 @@ if (Test-Path $configPath) {
             }
         }
     }
-    Ensure-OpenClawUnlocker -Cfg $cfg
+    Ensure-LocalUnlocker -Cfg $cfg
     $json = $cfg | ConvertTo-Json -Depth 6
     [System.IO.File]::WriteAllText($configPath, $json, $utf8NoBom)
     Write-Host "Wrote $configPath" -ForegroundColor Green
