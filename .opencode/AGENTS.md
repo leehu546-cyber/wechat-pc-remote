@@ -30,6 +30,7 @@ This PC is the user's Windows workstation. Assume the user wants practical local
 | `wechat-screen-unlock` | 解锁 / 进桌面 / 锁屏输密码 | Do not use screenshots or clicks; output `WECLAW_DELEGATE: openclaw-unlocker`. |
 | `bilibili-music` | 放歌 / 听歌 / 搜歌播放 | Search Bilibili, then play with `scripts/bilibili-play.ps1`. |
 | `wechat-task-orchestrator` | 复合电脑控制任务 / 需要打开给我看 / 发截图确认 / 检查是否成功 | Brain-only Plan -> Act -> Verify -> Report collaboration protocol. |
+| `wechat-desktop-interaction` | 打开应用并在输入框/搜索框/正文区输入文字 | One call: `scripts/desktop-interact.ps1` with app profile. |
 | fixed file opener | 打开这个文件 / 打开 Word / 打开 markdown / 打开刚才文档 | One call: `scripts/open-file-fast.ps1` with `-Kind word`, `-Kind markdown`, or default. |
 
 ## Local decision rule
@@ -39,6 +40,7 @@ This PC is the user's Windows workstation. Assume the user wants practical local
 - For generated files: put ordinary project docs in `D:\cursor\61`; if the user wants to see them, open via `scripts/open-file-fast.ps1`.
 - For "刚才/这个/上一步": prefer the most recent generated/opened file or the task context; if unsure, open the latest matching file from desktop/workspace using the fixed opener.
 - For compound PC-control tasks, load `wechat-task-orchestrator` first and run the task as Plan -> Act -> Verify -> Report. Word/WPS, browser, file, music, screen, and app-control tasks all use the same collaboration pattern.
+- For GUI typing tasks, load `wechat-desktop-interaction` and call `scripts/desktop-interact.ps1`. The bridge must not choose coordinates; the main brain chooses the app/target profile.
 
 ## Multi-agent collaboration pattern (brain-only)
 
@@ -56,7 +58,7 @@ Worker roles are capability domains, not independent decision makers:
 | Role | Scope | Canonical tools |
 |------|-------|-----------------|
 | FileAgent | create/find/open/move files | PowerShell file ops, `scripts/open-file-fast.ps1` |
-| DesktopAgent | foreground apps/windows and visible desktop state | fixed scripts or simple `Start-Process` |
+| DesktopAgent | foreground apps/windows, visible state, and profile-based GUI text input | `scripts/desktop-interact.ps1`, fixed scripts, or simple `Start-Process` |
 | DocumentAgent | Word/WPS/Markdown/PDF document tasks | doc creation scripts, then file opener |
 | BrowserAgent | open/search/play/navigate browser tasks | Edge URLs, Bilibili skill/script |
 | ScreenAgent | wake/sleep/screenshot/OCR/unlock | screen skills, `WECLAW_DELEGATE` for unlock |
@@ -114,6 +116,7 @@ If yes → **do not call more tools**. Reply:
 | 关屏 / 熄屏 / 关闭屏幕 | `wechat-screen-off` | `scripts/turn-off-screen.ps1` |
 | 放歌 / 听歌 / 播放音乐 | `bilibili-music` | B 站搜索 + `Start-Process msedge` 打开 |
 | 解锁 / 解除锁屏 / 解锁屏幕 / 解锁电脑 / 进到桌面 / 锁屏输密码 / 检索屏幕(要离开锁屏) | **委派 WeClaw 本地解锁执行器** | `WECLAW_DELEGATE: openclaw-unlocker` |
+| 打开 Codex/Cursor/WPS 并输入文字 / 在对话框输入 / 在正文写字 | `wechat-desktop-interaction` | `scripts/desktop-interact.ps1` |
 | 打开这个文件 / 打开这个 Word / 打开刚才文档 / 打开 markdown | 固定快速脚本 | `scripts/open-file-fast.ps1` |
 
 - Match by **meaning** (同义词), not exact keywords — **only you** classify intent.
@@ -125,6 +128,7 @@ If yes → **do not call more tools**. Reply:
 - Scripts must exit within 30s (screenshot: 90s; screen-ocr: 30s). `turn-off-screen.ps1` pins execution state before power-off so Agent can keep replying.
 - **Screen OCR:** Agent has no vision — use `wechat-screen-ocr` + `screen-ocr.ps1` to get **text**, then summarize in Chinese. Do not use screenshot for「看屏幕内容」.
 - **Open files fast:** when the user asks to open a recently created file, run exactly one shell call: `powershell -ExecutionPolicy Bypass -File scripts/open-file-fast.ps1 -Kind word` for Word, `-Kind markdown` for Markdown, or no `-Kind` for unknown. Do not use Word COM automation, do not inspect many files, and do not wait for the GUI app to finish.
+- **Desktop typing:** when the user asks to type into a desktop app, use `wechat-desktop-interaction` and `desktop-interact.ps1`. Default is type-only; add `-Send` only when the user explicitly asks to send/submit/press Enter. Never use it for lock-screen password entry.
 
 ## Script rules
 

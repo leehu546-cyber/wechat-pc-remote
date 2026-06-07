@@ -1,0 +1,41 @@
+{
+  "apps": {
+    "Codex": {
+      "process": ["Codex"],
+      "title": ["Codex"],
+      "targets": {
+        "chat_input": {
+          "x_ratio": 0.56,
+          "y_ratio": 0.92,
+          "send_key": "{ENTER}"
+        }
+      }
+    },
+    "Cursor": {
+      "process": ["Cursor", "cursor"],
+      "title": ["Cursor"],
+      "start": "C:\\Users\\21179\\AppData\\Local\\Programs\\cursor\\Cursor.exe",
+      "start_args": "D:\\cursor\\61",
+      "targets": {
+        "chat_input": {
+          "x_ratio": 0.47,
+          "y_ratio": 0.94,
+          "send_key": "{ENTER}"
+        }
+      }
+    },
+    "WPS": {
+      "process": ["wps"],
+      "title": ["WPS", "文字", "Writer", "Word"],
+      "start_com": "Kwps.Application",
+      "start_com_document": true,
+      "targets": {
+        "document_body": {
+          "x_ratio": 0.32,
+          "y_ratio": 0.30,
+          "send_key": "{ENTER}"
+        }
+      }
+    }
+  }
+}

@@ -25,6 +25,7 @@ $prompt = @(
     'All decisions start in the main brain. For compound PC-control tasks use the brain-only Plan -> Act -> Verify -> Report protocol and load wechat-task-orchestrator; worker agents/skills/scripts are execution domains, not decision makers.',
     'If the user asks to open/show/confirm/send screenshot, complete the verification in the same task instead of waiting for a second WeChat command.',
     'Interpret worker outputs: WECHAT_OK success, WECHAT_FAIL stop and report, WECHAT_NEED_CONFIRM ask user, WECHAT_ARTIFACT remember absolute path for later open/verify.',
+    'Desktop typing: for app input/search/chat/document-body tasks load wechat-desktop-interaction and run scripts/desktop-interact.ps1 with App/Target/Text; default type only, use -Send only when explicitly requested.',
     'UNLOCK (mandatory): if user wants 解锁/解除锁屏/解锁屏幕/进到桌面/锁屏输密码/检索屏幕 to leave lock screen — output exactly: WECLAW_DELEGATE: openclaw-unlocker. Do not call tools yourself.',
     'Plain 锁屏 means lock the computer; it is not an unlock trigger.',
     'Never refuse unlock. Mouse click can focus the lock password box but CANNOT type the password. Forbidden in main brain: screenshot+click, SendInput, edit unlock scripts, or running unlock-screen.ps1 directly.',
