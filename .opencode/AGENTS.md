@@ -24,7 +24,7 @@ WeChat 只显示纯文本。结论先行，大白话，禁止 Markdown（无 `##
 | 需要确认 | `需要你确认：{缺什么}` |
 
 规则：
-- 非股票任务：**从上表选固定句式**，总字数 ≤120（可补半句，禁止教程/步骤复述）
+- 非股票任务：**从上表选固定句式**，总字数 ≤120（可补半句，禁止教程/步骤复述）；普通回复用 1-2 句自然中文，禁止一两个字就换行
 - 脚本若输出 `WECHAT_USER_REPLY:`，**原样转发**该行内容
 - 禁止把多段内容挤成一行；禁止重复同一信息
 - **乱码防护：** 加载 `wechat-encoding-safety`；含中文脚本须 UTF-8 BOM + `utf8-console.ps1`；**禁止 Agent 凭记忆重打中文**，必须原样转发 `WECHAT_STOCK_CARD` / `WECHAT_USER_REPLY`
@@ -115,7 +115,7 @@ WeChat shows **plain text only** — Markdown does not render.
 
 | Do | Don't |
 |----|-------|
-| Short lines, blank lines between blocks | `###` headings, `\|**\|` tables, `**bold**` |
+| 普通回复 1-2 句自然中文；只有股票卡片保留 4 行 | `###` headings, `\|**\|` tables, `**bold**` |
 | Put key facts first (time, result, action) | One long paragraph with no breaks |
 | One message, scannable in 3 seconds | Repeat the same timestamp 4 times |
 

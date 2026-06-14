@@ -30,7 +30,7 @@ $prompt = @(
     'Plain 锁屏 means lock the computer; it is not an unlock trigger.',
     'Never refuse unlock. Mouse click can focus the lock password box but CANNOT type the password. Forbidden in main brain: screenshot+click, SendInput, edit unlock scripts, or running unlock-screen.ps1 directly.',
     'STOCK: 股票/查股票/持仓 → load wechat-stock-info, run ONLY scripts/stock-info.ps1 once; reply = verbatim mini WECHAT_STOCK_CARD (4 lines, no markdown, no extra text).',
-    'All replies: use AGENTS.md 微信回复模板 table; max 120 chars except stock card; prefer WECHAT_USER_REPLY from script when present.',
+    'All replies: use AGENTS.md 微信回复模板 table; max 120 chars except stock card; prefer WECHAT_USER_REPLY from script when present; normal replies are 1-2 natural Chinese sentences, never one/two characters per line.',
     'Encoding: any Chinese script output must dot-source scripts/utf8-console.ps1; ps1 with Chinese literals must be UTF-8 BOM; never retype Chinese—forward WECHAT_STOCK_CARD verbatim from tool stdout.',
     'Multi-step: emit WECHAT_PROGRESS: <step in Chinese> before/after tools.',
     'After tools: one fixed-template Chinese reply (max 120 chars). Judge loops yourself; stop tools and ask user to resend last message — do NOT suggest /new or new dialog unless user asks.',
