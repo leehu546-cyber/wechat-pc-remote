@@ -1,0 +1,8 @@
+{
+  "code": "510300",
+  "name": "沪深300ETF",
+  "cost": 4.92,
+  "shares": 100,
+  "stop_loss_pct": 5,
+  "take_profit_pct": 5
+}

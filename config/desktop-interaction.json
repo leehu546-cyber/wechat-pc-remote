@@ -24,6 +24,17 @@
         }
       }
     },
+    "WeChat": {
+      "process": ["WeChat", "WeChat.exe", "WeChatApp"],
+      "title": ["微信", "WeChat"],
+      "targets": {
+        "chat_input": {
+          "x_ratio": 0.50,
+          "y_ratio": 0.94,
+          "send_key": "{ENTER}"
+        }
+      }
+    },
     "WPS": {
       "process": ["wps"],
       "title": ["WPS", "文字", "Writer", "Word"],

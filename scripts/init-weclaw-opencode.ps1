@@ -29,8 +29,11 @@ $prompt = @(
     'UNLOCK (mandatory): if user wants 解锁/解除锁屏/解锁屏幕/进到桌面/锁屏输密码/检索屏幕 to leave lock screen — output exactly: WECLAW_DELEGATE: openclaw-unlocker. Do not call tools yourself.',
     'Plain 锁屏 means lock the computer; it is not an unlock trigger.',
     'Never refuse unlock. Mouse click can focus the lock password box but CANNOT type the password. Forbidden in main brain: screenshot+click, SendInput, edit unlock scripts, or running unlock-screen.ps1 directly.',
+    'STOCK: 股票/查股票/持仓 → load wechat-stock-info, run ONLY scripts/stock-info.ps1 once; reply = verbatim mini WECHAT_STOCK_CARD (4 lines, no markdown, no extra text).',
+    'All replies: use AGENTS.md 微信回复模板 table; max 120 chars except stock card; prefer WECHAT_USER_REPLY from script when present.',
     'Multi-step: emit WECHAT_PROGRESS: <step in Chinese> before/after tools.',
-    'After tools: one concise Chinese reply (max 120 chars). Judge loops yourself; stop tools and ask user to retry or /new.',
+    'After tools: one fixed-template Chinese reply (max 120 chars). Judge loops yourself; stop tools and ask user to resend last message — do NOT suggest /new or new dialog unless user asks.',
+    'Memory: continue same WeChat session; local chat-log preserves history. Never tell user to open a new dialog.',
     'Screen text (no vision): load wechat-screen-ocr, run ONLY scripts/screen-ocr.ps1, summarize OCR text in Chinese.',
     'Scripts exit within 30s. Prefer skills + scripts/*.ps1 for display/screenshot/ocr.'
 ) -join ' '
@@ -46,15 +49,21 @@ $defaultProgress = @{
 }
 $defaultRouting = @{
     simple_bypass   = $false
-    cancel_previous = $true
+    cancel_previous = $false
 }
+$everosDisabled = $false
 $defaultMemory = @{
     everos = @{
-        enabled          = $true
+        enabled          = $everosDisabled
         base_url         = "http://127.0.0.1:8080"
         top_k            = 5
         method           = "keyword"
         inject_max_chars = 1500
+    }
+    local = @{
+        enabled   = $true
+        max_turns = 30
+        max_chars = 6000
     }
 }
 $defaultUnlocker = @{
@@ -99,20 +108,30 @@ if (Test-Path $configPath) {
             $cfg.routing | Add-Member -NotePropertyName simple_bypass -NotePropertyValue $false -Force
             Write-Host "Upgraded routing.simple_bypass → false (thin bridge, brain routes all)" -ForegroundColor Yellow
         }
-        if (-not $cfg.routing.cancel_previous) {
-            $cfg.routing | Add-Member -NotePropertyName cancel_previous -NotePropertyValue $true -Force
-            Write-Host "Upgraded routing.cancel_previous false→true" -ForegroundColor Yellow
+        if ($cfg.routing.cancel_previous -ne $false) {
+            $cfg.routing | Add-Member -NotePropertyName cancel_previous -NotePropertyValue $false -Force
+            Write-Host "Upgraded routing.cancel_previous → false (avoid interrupting multi-turn chat)" -ForegroundColor Yellow
         }
     }
     if (-not $cfg.memory) {
         $cfg | Add-Member -NotePropertyName memory -NotePropertyValue ([pscustomobject]$defaultMemory)
-        Write-Host "Added memory.everos defaults (local http://127.0.0.1:8080)" -ForegroundColor Yellow
-    } elseif (-not $cfg.memory.everos) {
-        $cfg.memory | Add-Member -NotePropertyName everos -NotePropertyValue ([pscustomobject]$defaultMemory.everos)
-        Write-Host "Added memory.everos defaults" -ForegroundColor Yellow
-    } elseif ($cfg.memory.everos.method -eq "hybrid" -and $defaultMemory.everos.method -eq "keyword") {
-        $cfg.memory.everos.method = "keyword"
-        Write-Host "Downgraded memory.everos.method hybrid→keyword (local Ollama has no rerank)" -ForegroundColor Yellow
+        Write-Host "Added memory defaults (everos off, local chat-log on)" -ForegroundColor Yellow
+    } else {
+        if (-not $cfg.memory.everos) {
+            $cfg.memory | Add-Member -NotePropertyName everos -NotePropertyValue ([pscustomobject]$defaultMemory.everos)
+        }
+        if (-not $cfg.memory.local) {
+            $cfg.memory | Add-Member -NotePropertyName local -NotePropertyValue ([pscustomobject]$defaultMemory.local)
+            Write-Host "Added memory.local chat-log defaults" -ForegroundColor Yellow
+        }
+        if ($cfg.memory.everos.enabled -eq $true) {
+            $cfg.memory.everos.enabled = $false
+            Write-Host "Set memory.everos.enabled → false (local chat-log only)" -ForegroundColor Yellow
+        }
+        if ($cfg.memory.everos.method -eq "hybrid" -and $defaultMemory.everos.method -eq "keyword") {
+            $cfg.memory.everos.method = "keyword"
+            Write-Host "Downgraded memory.everos.method hybrid→keyword" -ForegroundColor Yellow
+        }
     }
     if (-not $cfg.agents.opencode) {
         $cfg.agents | Add-Member -NotePropertyName opencode -NotePropertyValue ([pscustomobject]@{
@@ -199,6 +218,7 @@ Write-Host "  cwd: $workDir"
 Write-Host "  progress: mode=$($defaultProgress.mode), enabled=$($defaultProgress.enabled), start_delay=$($defaultProgress.start_delay_sec)s"
 Write-Host "  routing.simple_bypass: $($defaultRouting.simple_bypass) (thin bridge)"
 Write-Host "  routing.cancel_previous: $($defaultRouting.cancel_previous)"
-Write-Host "  memory.everos: enabled=$($defaultMemory.everos.enabled), base=$($defaultMemory.everos.base_url)"
+Write-Host "  memory.everos: enabled=$($defaultMemory.everos.enabled)"
+Write-Host "  memory.local: enabled=$($defaultMemory.local.enabled), max_turns=$($defaultMemory.local.max_turns)"
 Write-Host ""
 Write-Host "Next: weclaw start (scan QR on first run)" -ForegroundColor Cyan

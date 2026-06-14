@@ -42,12 +42,14 @@ description: MANDATORY for unlock — 解锁, 解锁屏幕, 解锁电脑, 解除
 3. **本回合禁止的任何 tool**：
    - read / write / edit `unlock-screen.ps1`、`unlock-sendkeys.ps1`
    - 截图、`wechat-screenshot`、鼠标点击、UI 自动化、Selenium
-   - SendInput、OpenInputDesktop、SYSTEM schtasks、RunAs 管理员、EncodedCommand
+    - SendInput、OpenInputDesktop、RunAs 管理员、EncodedCommand
    - 在 chat 里向用户索要或复述密码（密码只读 json）
 
-4. 根据脚本 stdout 收尾（一句中文，≤120 字）：
-   - 含 `WECHAT_OK: unlock password sent` → 「已发送解锁密码，请看屏幕是否进入桌面。」
-   - 含 `WECHAT_FAIL` → 提示运行 `scripts/setup-unlock-screen.ps1`，建议 `/new` 后重试
+4. 根据脚本 stdout 收尾（固定句式，≤120 字）：
+   - 含 `WECHAT_USER_REPLY:` → **原样转发**该行
+   - 含 `WECHAT_OK: unlocked verified` → `已解锁，请看屏幕。`
+   - 含 `WECHAT_OK`（其他） → `已解锁，请看屏幕。`
+   - 含 `WECHAT_FAIL` → `解锁失败：{原因}`
    - **禁止**在未见 `WECHAT_OK` 时声称已解锁
 
 ---
@@ -55,8 +57,10 @@ description: MANDATORY for unlock — 解锁, 解锁屏幕, 解锁电脑, 解除
 ## 脚本内部（Agent 勿改）
 
 1. `wake-screen.ps1` 亮屏，等 2s  
-2. `schtasks` **当前用户** `/RL HIGHEST`（拒绝则 LIMITED）运行 `unlock-sendkeys.ps1`  
-3. `unlock-sendkeys.ps1`：**Space → 0.8s → SendKeys 密码 → Enter**（密码来自 json）
+2. 若已安装 [hodor](https://github.com/PsyChip/hodor) Credential Provider → `unlock-via-pipe.ps1`（`\\.\pipe\CredentialProviderPipe`）  
+3. 否则 `schtasks` **当前用户** HIGHEST（失败则 LIMITED）运行 `unlock-sendkeys.ps1`  
+4. `unlock-sendkeys.ps1`：Space → 逐位 PIN SendWait（无 Enter，Win11 满位自动提交）  
+5. `unlock-verify.ps1`：仅验证通过后输出 `WECHAT_OK`（禁止只看 schtasks SUCCESS）
 
 ---
 

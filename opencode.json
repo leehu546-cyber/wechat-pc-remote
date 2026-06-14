@@ -1,16 +1,33 @@
 {
   "$schema": "https://opencode.ai/config.json",
   "model": "deepseek/deepseek-v4-flash",
+  "compaction": {
+    "auto": true,
+    "prune": true,
+    "reserved": 16384
+  },
   "permission": {
     "skill": "allow",
-    "doom_loop": "ask"
+    "doom_loop": "ask",
+    "edit": {
+      "scripts/unlock-screen.ps1": "deny",
+      "scripts/unlock-sendkeys.ps1": "deny",
+      "scripts/unlock-verify.ps1": "deny",
+      "scripts/unlock-via-pipe.ps1": "deny"
+    }
   },
   "agent": {
     "build": {
       "steps": 10,
       "permission": {
         "skill": "allow",
-        "doom_loop": "ask"
+        "doom_loop": "ask",
+        "edit": {
+          "scripts/unlock-screen.ps1": "deny",
+          "scripts/unlock-sendkeys.ps1": "deny",
+          "scripts/unlock-verify.ps1": "deny",
+          "scripts/unlock-via-pipe.ps1": "deny"
+        }
       }
     }
   }

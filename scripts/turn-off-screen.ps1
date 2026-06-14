@@ -28,3 +28,4 @@ $off = [IntPtr]2
 [void][Win32.Win32DisplayApi]::SendNotifyMessage([IntPtr]0xFFFF, 0x0112, [IntPtr]0xF170, $off)
 
 Write-Host "WECHAT_OK: 已关闭显示器"
+Write-Host "WECHAT_USER_REPLY: 显示器已关闭。"

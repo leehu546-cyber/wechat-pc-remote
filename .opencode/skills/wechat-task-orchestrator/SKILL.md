@@ -9,19 +9,7 @@ description: Use for compound WeChat PC-control tasks, especially requests that 
 
 Use this skill when the user asks for a multi-step computer task, asks to see the result, asks for screenshot/OCR confirmation, or combines creation/opening/browser/screen/file actions.
 
-The main brain is the only decision maker. Domain agents are worker roles: they execute a chosen step and return evidence. They must not change the user's goal or invent a new plan.
-
-## Worker Roles
-
-| Role | Owns | Must not do |
-|------|------|-------------|
-| FileAgent | create, find, open, copy, move files | decide unrelated app/browser actions |
-| DesktopAgent | visible app/window state, foregrounding, simple app launch | write documents or analyze screen text |
-| DocumentAgent | Word/WPS/Markdown/PDF creation and editing | verify GUI visibility by itself |
-| BrowserAgent | browser open/search/play/navigation | use screenshots as analysis unless asked |
-| ScreenAgent | wake, screen off, screenshot, OCR, unlock delegate | improvise display commands |
-| VerifierAgent | screenshot/OCR/file/process/window verification | redo the main action unless brain decides |
-| ReporterAgent | final concise Chinese reply | expose internal chain details |
+The main brain is the only decision maker. Domain agents are worker roles: they execute a chosen step and return evidence.
 
 ## Protocol
 
@@ -29,8 +17,10 @@ For compound tasks, run:
 
 1. Plan: classify task and choose the smallest worker sequence.
 2. Act: execute each step with the fixed skill/script/tool for that worker.
-3. Verify: if the user says 打开给我看 / 发截图 / 确认 / 看看成功没有 / 让我看到, verify with screenshot, OCR, file existence, or process/window checks.
-4. Report: one concise Chinese sentence with the outcome or first clear failure.
+3. Verify: if the user asks to see/confirm, verify with screenshot, OCR, file existence, or process/window checks.
+4. Report: **固定句式收尾**（见 AGENTS.md 微信回复模板）：
+   - 成功：`已完成：{做了什么}`
+   - 失败：`没做成：{一句原因}`
 
 Visible progress for compound tasks:
 
@@ -40,31 +30,19 @@ WECHAT_PROGRESS: 正在执行第N步
 WECHAT_PROGRESS: 正在验证结果
 ```
 
-Keep progress lines separate from final replies.
-
 ## Result Prefixes
-
-Interpret worker/script output as:
 
 | Prefix | Brain action |
 |--------|--------------|
 | `WECHAT_OK:` | Continue to the next step or report success. |
-| `WECHAT_FAIL:` | Stop repeated attempts; report the failure reason. |
-| `WECHAT_NEED_CONFIRM:` | Ask the user for confirmation. |
+| `WECHAT_FAIL:` | Stop; reply `没做成：{原因}` |
+| `WECHAT_USER_REPLY:` | **原样转发**作为最终回复 |
+| `WECHAT_NEED_CONFIRM:` | Reply `需要你确认：{缺什么}` |
 | `WECHAT_ARTIFACT:` | Store the absolute path for later open/verify steps. |
-
-## Common Flows
-
-- Create file -> open file -> screenshot verify.
-- Open browser/page -> wait briefly if needed -> screenshot/OCR verify when requested.
-- Play music/video -> open page/player -> verify visible window or screenshot when requested.
-- Screen action -> fixed screen skill/script -> concise reply.
-- Unlock -> output only `WECLAW_DELEGATE: openclaw-unlocker`; after delegate result, screenshot only if the user requested proof.
 
 ## Hard Rules
 
-- Do not route by bridge-side keywords; the brain chooses.
 - Do not split a complete compound request into multiple WeChat turns.
-- Do not list/read many files for known PC actions; use fixed scripts and recent task context.
-- Do not retry the same failed action more than once. If no progress, report the failure or ask for one missing detail.
-- Word/WPS is only one example. Apply this protocol to all local PC-control domains.
+- Do not list/read many files for known PC actions; use fixed scripts.
+- Do not retry the same failed action more than once.
+- Final reply ≤120 chars unless forwarding stock CARD.

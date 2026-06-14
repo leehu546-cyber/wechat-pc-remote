@@ -76,6 +76,8 @@ Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue
 
 if ($result -match "Error|error|fail") {
     Write-Host "WECHAT_FAIL: 截图发送失败"
+    Write-Host "WECHAT_USER_REPLY: 没做成：截图发送失败。"
     exit 1
 }
 Write-Host "WECHAT_OK: 截图已发送"
+Write-Host "WECHAT_USER_REPLY: 截图已发到微信。"

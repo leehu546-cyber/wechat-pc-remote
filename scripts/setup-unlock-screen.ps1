@@ -18,4 +18,20 @@ if (-not $Password) {
 
 @{ password = $Password } | ConvertTo-Json | Set-Content -Path $configPath -Encoding UTF8
 Write-Host "[ok] Saved to $configPath (not in git)" -ForegroundColor Green
+
+# Optional: PsyChip/hodor Credential Provider (https://github.com/PsyChip/hodor)
+try {
+    $client = New-Object System.IO.Pipes.NamedPipeClientStream(
+        ".", "CredentialProviderPipe",
+        [System.IO.Pipes.PipeDirection]::InOut
+    )
+    $client.Connect(500)
+    $client.Close()
+    Write-Host "[ok] hodor pipe CredentialProviderPipe is reachable — unlock-screen.ps1 will prefer pipe" -ForegroundColor Green
+} catch {
+    Write-Host "[info] hodor pipe not installed — unlock-screen.ps1 will use schtasks PIN SendKeys fallback" -ForegroundColor Yellow
+    Write-Host "       Install hodor (admin, one-time) for reliable PIN-only unlock: https://github.com/PsyChip/hodor" -ForegroundColor DarkGray
+}
+
 Write-Host "Test: powershell -File scripts\unlock-screen.ps1" -ForegroundColor Cyan
+Write-Host "Matrix: powershell -File scripts\test-unlock-methods.ps1 [-LockScreenMode]" -ForegroundColor Cyan

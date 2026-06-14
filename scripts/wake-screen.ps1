@@ -28,3 +28,4 @@ $on = [IntPtr](-1)
 [Win32.Win32WakeApi]::mouse_event(0x0001, 1, 0, 0, [UIntPtr]::Zero)
 
 Write-Host "WECHAT_OK: 已唤醒显示器"
+Write-Host "WECHAT_USER_REPLY: 屏幕已点亮。"
