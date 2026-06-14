@@ -1,17 +1,26 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <rect width="512" height="512" rx="96" fill="#2563eb"/>
-  <rect x="72" y="120" width="368" height="224" rx="24" fill="#0f1419" stroke="#93c5fd" stroke-width="16"/>
-  <rect x="176" y="360" width="160" height="24" rx="8" fill="#93c5fd"/>
-  <rect x="216" y="384" width="80" height="16" rx="6" fill="#60a5fa"/>
-  <circle cx="256" cy="232" r="56" fill="#fbbf24"/>
-  <g stroke="#fbbf24" stroke-width="20" stroke-linecap="round">
-    <line x1="256" y1="120" x2="256" y2="72"/>
-    <line x1="256" y1="344" x2="256" y2="392"/>
-    <line x1="144" y1="232" x2="96" y2="232"/>
-    <line x1="368" y1="232" x2="416" y2="232"/>
-    <line x1="176" y1="152" x2="142" y2="118"/>
-    <line x1="336" y1="152" x2="370" y2="118"/>
-    <line x1="176" y1="312" x2="142" y2="346"/>
-    <line x1="336" y1="312" x2="370" y2="346"/>
-  </g>
+  <defs>
+    <linearGradient id="bg" x1="66" y1="46" x2="438" y2="462" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFFFFF"/>
+      <stop offset="0.55" stop-color="#EEF5FF"/>
+      <stop offset="1" stop-color="#F8F1FF"/>
+    </linearGradient>
+    <linearGradient id="button" x1="159" y1="133" x2="359" y2="371" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#30D5C8"/>
+      <stop offset="0.42" stop-color="#0A84FF"/>
+      <stop offset="1" stop-color="#4F46E5"/>
+    </linearGradient>
+    <filter id="shadow" x="48" y="48" width="416" height="416" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="24" stdDeviation="28" flood-color="#1F3B68" flood-opacity="0.22"/>
+    </filter>
+  </defs>
+  <rect width="512" height="512" rx="108" fill="url(#bg)"/>
+  <circle cx="256" cy="256" r="138" fill="url(#button)" filter="url(#shadow)"/>
+  <circle cx="218" cy="206" r="38" fill="#FFFFFF" opacity="0.72"/>
+  <path d="M256 160v96l70 48" fill="none" stroke="#FFFFFF" stroke-width="34" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="92" y="116" width="34" height="34" rx="3" fill="#FFCC4D"/>
+  <rect x="126" y="150" width="34" height="34" rx="3" fill="#FFCC4D" opacity="0.72"/>
+  <rect x="376" y="328" width="28" height="28" rx="3" fill="#FF7A90"/>
+  <rect x="404" y="356" width="28" height="28" rx="3" fill="#FF7A90" opacity="0.72"/>
+  <path d="M384 112h18v18h18v18h-18v18h-18v-18h-18v-18h18v-18Z" fill="#111827" opacity="0.8"/>
 </svg>
