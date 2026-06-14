@@ -3,477 +3,147 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
-  <meta name="theme-color" content="#f5f7fb">
+  <meta name="theme-color" content="#2563eb">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="亮屏">
-  <link rel="manifest" href="manifest.json">
-  <link rel="icon" href="icon.svg" type="image/svg+xml">
-  <link rel="apple-touch-icon" href="icon.svg">
+  <link rel="manifest" href="/manifest.json">
+  <link rel="icon" href="/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/icon.svg">
   <title>电脑亮屏</title>
   <style>
     :root {
-      --ink: #111827;
-      --muted: #687386;
-      --glass: rgba(255, 255, 255, 0.72);
-      --glass-strong: rgba(255, 255, 255, 0.9);
-      --line: rgba(17, 24, 39, 0.11);
-      --blue: #0a84ff;
-      --mint: #30d5c8;
-      --gold: #ffcc4d;
-      --rose: #ff7a90;
-      --ok: #0b8f55;
-      --err: #c93442;
+      --bg: #0f1419;
+      --card: #1a2332;
+      --text: #e8edf4;
+      --muted: #8b9cb3;
+      --accent: #2563eb;
+      --accent-press: #1d4ed8;
+      --ok: #22c55e;
+      --err: #ef4444;
       --safe-bottom: env(safe-area-inset-bottom, 0px);
     }
-
-    * {
-      box-sizing: border-box;
-      -webkit-tap-highlight-color: transparent;
-    }
-
-    html,
-    body {
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html, body {
       margin: 0;
       min-height: 100%;
-      color: var(--ink);
-      font-family: "SF Pro Display", "SF Pro Text", "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
-      background:
-        radial-gradient(circle at 18% 12%, rgba(48, 213, 200, 0.32), transparent 28rem),
-        radial-gradient(circle at 86% 8%, rgba(255, 204, 77, 0.34), transparent 22rem),
-        linear-gradient(160deg, #fbfcff 0%, #eef4ff 48%, #f8f1ff 100%);
-      overflow-x: hidden;
+      background: radial-gradient(circle at top, #1e293b 0%, var(--bg) 55%);
+      color: var(--text);
+      font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
     }
-
-    body::before {
-      content: "";
-      position: fixed;
-      inset: 0;
-      pointer-events: none;
-      background-image:
-        linear-gradient(rgba(17, 24, 39, 0.035) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(17, 24, 39, 0.035) 1px, transparent 1px);
-      background-size: 28px 28px;
-      mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.5), transparent 60%);
-    }
-
-    .page {
-      position: relative;
+    .wrap {
       min-height: 100dvh;
-      display: grid;
-      grid-template-rows: auto 1fr auto;
-      padding: 18px 18px calc(18px + var(--safe-bottom));
-      isolation: isolate;
-    }
-
-    .topbar {
       display: flex;
+      flex-direction: column;
       align-items: center;
-      justify-content: space-between;
-      width: min(100%, 980px);
-      margin: 0 auto;
-      padding: 10px 2px;
-      color: rgba(17, 24, 39, 0.74);
-      font-size: 0.84rem;
+      justify-content: center;
+      padding: 24px 20px calc(32px + var(--safe-bottom));
+      gap: 28px;
     }
-
-    .brand {
-      display: flex;
-      align-items: center;
-      gap: 9px;
-      font-weight: 650;
-    }
-
-    .brand-mark {
-      width: 24px;
-      height: 24px;
-      border-radius: 7px;
-      background:
-        linear-gradient(135deg, var(--blue), var(--mint));
-      box-shadow: 0 10px 24px rgba(10, 132, 255, 0.24);
-      position: relative;
-    }
-
-    .brand-mark::after {
-      content: "";
-      position: absolute;
-      width: 8px;
-      height: 8px;
-      right: 4px;
-      top: 4px;
-      background: var(--gold);
-      box-shadow: -8px 8px 0 rgba(255, 255, 255, 0.7);
-    }
-
-    .signal {
-      display: inline-flex;
-      align-items: center;
-      gap: 7px;
-    }
-
-    .signal::before {
-      content: "";
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: var(--ok);
-      box-shadow: 0 0 0 6px rgba(11, 143, 85, 0.12);
-    }
-
-    .hero {
-      width: min(100%, 980px);
-      margin: 0 auto;
-      display: grid;
-      grid-template-columns: minmax(0, 1.02fr) minmax(280px, 0.98fr);
-      align-items: center;
-      gap: clamp(22px, 4vw, 52px);
-      padding: clamp(28px, 6vh, 68px) 0;
-    }
-
-    .copy {
-      display: grid;
-      gap: 16px;
-    }
-
-    .eyebrow {
-      width: fit-content;
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 7px 11px;
-      border: 1px solid var(--line);
-      border-radius: 999px;
-      background: rgba(255, 255, 255, 0.54);
-      backdrop-filter: blur(18px);
-      color: var(--muted);
-      font-size: 0.82rem;
-      font-weight: 600;
-    }
-
     h1 {
       margin: 0;
-      max-width: 12ch;
-      font-size: clamp(3rem, 13vw, 7.4rem);
-      line-height: 0.9;
-      font-weight: 760;
-      letter-spacing: 0;
+      font-size: 1.5rem;
+      font-weight: 600;
+      letter-spacing: 0.02em;
     }
-
     .sub {
       margin: 0;
-      max-width: 28rem;
       color: var(--muted);
-      font-size: clamp(1rem, 2.3vw, 1.2rem);
-      line-height: 1.72;
-    }
-
-    .panel {
-      position: relative;
-      min-height: 460px;
-      display: grid;
-      place-items: center;
-      border: 1px solid rgba(255, 255, 255, 0.78);
-      border-radius: 8px;
-      background:
-        linear-gradient(180deg, rgba(255, 255, 255, 0.82), rgba(255, 255, 255, 0.52)),
-        linear-gradient(135deg, rgba(10, 132, 255, 0.1), rgba(255, 204, 77, 0.12));
-      box-shadow: 0 32px 90px rgba(37, 44, 65, 0.18);
-      overflow: hidden;
-      backdrop-filter: blur(24px);
-    }
-
-    .scene {
-      position: absolute;
-      inset: 0;
-      pointer-events: none;
-    }
-
-    .pixel {
-      position: absolute;
-      image-rendering: pixelated;
-      animation: float 5s ease-in-out infinite;
-    }
-
-    .block {
-      width: 34px;
-      height: 34px;
-      border-radius: 3px;
-      background:
-        linear-gradient(135deg, #fff2aa 0 45%, #ffd35f 45% 100%);
-      box-shadow:
-        inset 0 -6px 0 rgba(176, 116, 0, 0.2),
-        0 14px 26px rgba(255, 176, 0, 0.22);
-    }
-
-    .block.one { left: 13%; top: 22%; animation-delay: -0.4s; }
-    .block.two { right: 15%; top: 16%; transform: scale(0.72); animation-delay: -2.2s; }
-    .block.three { left: 18%; bottom: 22%; transform: scale(0.58); animation-delay: -1.3s; }
-
-    .spark {
-      width: 12px;
-      height: 12px;
-      background: var(--rose);
-      box-shadow:
-        12px 0 0 var(--rose),
-        -12px 0 0 var(--rose),
-        0 12px 0 var(--rose),
-        0 -12px 0 var(--rose);
-      transform: rotate(45deg);
-      opacity: 0.9;
-    }
-
-    .spark.one { right: 23%; bottom: 26%; animation-delay: -1.1s; }
-    .spark.two { left: 27%; top: 12%; transform: scale(0.72) rotate(45deg); animation-delay: -2.8s; }
-
-    .portal {
-      position: absolute;
-      width: min(64vw, 320px);
-      aspect-ratio: 1;
-      border-radius: 50%;
-      background:
-        radial-gradient(circle at 50% 45%, rgba(255, 255, 255, 0.92) 0 28%, rgba(48, 213, 200, 0.3) 29% 43%, rgba(10, 132, 255, 0.2) 44% 58%, transparent 59%),
-        conic-gradient(from 0deg, rgba(10, 132, 255, 0.14), rgba(255, 204, 77, 0.32), rgba(255, 122, 144, 0.2), rgba(10, 132, 255, 0.14));
-      filter: blur(0.1px);
-      animation: spin 18s linear infinite;
-    }
-
-    .wake-card {
-      position: relative;
-      z-index: 1;
-      width: min(82%, 310px);
-      display: grid;
-      justify-items: center;
-      gap: 18px;
-      padding: 22px;
-      border: 1px solid rgba(255, 255, 255, 0.8);
-      border-radius: 8px;
-      background: rgba(255, 255, 255, 0.64);
-      box-shadow: 0 18px 46px rgba(23, 31, 54, 0.15);
-      backdrop-filter: blur(22px);
-    }
-
-    #wakeBtn {
-      width: min(62vw, 198px);
-      height: min(62vw, 198px);
-      max-width: 198px;
-      max-height: 198px;
-      border: 0;
-      border-radius: 50%;
-      color: white;
-      font-size: clamp(1.55rem, 9vw, 2.25rem);
-      font-weight: 780;
-      letter-spacing: 0;
-      background:
-        radial-gradient(circle at 34% 24%, rgba(255, 255, 255, 0.55), transparent 28%),
-        linear-gradient(145deg, var(--blue), #4f46e5);
-      box-shadow:
-        0 22px 48px rgba(10, 132, 255, 0.36),
-        inset 0 2px 0 rgba(255, 255, 255, 0.36),
-        inset 0 -10px 22px rgba(17, 24, 39, 0.18);
-      touch-action: manipulation;
-      transition: transform 0.18s ease, box-shadow 0.18s ease, opacity 0.18s ease;
-    }
-
-    #wakeBtn:active:not(:disabled) {
-      transform: scale(0.96) translateY(2px);
-      box-shadow:
-        0 12px 28px rgba(10, 132, 255, 0.3),
-        inset 0 2px 0 rgba(255, 255, 255, 0.36);
-    }
-
-    #wakeBtn:disabled {
-      opacity: 0.58;
-    }
-
-    #status {
-      min-height: 2.5rem;
-      color: var(--muted);
-      font-size: 0.94rem;
-      line-height: 1.45;
+      font-size: 0.95rem;
       text-align: center;
-      text-wrap: balance;
+      line-height: 1.5;
+      max-width: 20rem;
     }
-
+    #wakeBtn {
+      width: min(72vw, 280px);
+      height: min(72vw, 280px);
+      border: none;
+      border-radius: 50%;
+      background: linear-gradient(145deg, #3b82f6, var(--accent));
+      color: #fff;
+      font-size: 2rem;
+      font-weight: 700;
+      box-shadow: 0 18px 48px rgba(37, 99, 235, 0.45), inset 0 2px 0 rgba(255,255,255,0.2);
+      touch-action: manipulation;
+      transition: transform 0.12s ease, box-shadow 0.12s ease, opacity 0.12s ease;
+    }
+    #wakeBtn:active:not(:disabled) {
+      transform: scale(0.96);
+      box-shadow: 0 8px 24px rgba(37, 99, 235, 0.35);
+      background: linear-gradient(145deg, #2563eb, var(--accent-press));
+    }
+    #wakeBtn:disabled {
+      opacity: 0.55;
+    }
+    #status {
+      min-height: 1.5rem;
+      font-size: 1rem;
+      text-align: center;
+      color: var(--muted);
+    }
     #status.ok { color: var(--ok); }
     #status.err { color: var(--err); }
-
+    .hint {
+      font-size: 0.82rem;
+      color: var(--muted);
+      text-align: center;
+      line-height: 1.6;
+      max-width: 22rem;
+    }
     .setup {
       display: none;
       width: 100%;
+      max-width: 22rem;
+      background: var(--card);
+      border-radius: 16px;
+      padding: 16px;
       gap: 10px;
     }
-
-    .setup.show {
-      display: grid;
-    }
-
-    .setup label {
-      color: var(--muted);
-      font-size: 0.78rem;
-      font-weight: 650;
-    }
-
+    .setup.show { display: grid; }
+    .setup label { font-size: 0.85rem; color: var(--muted); }
     .setup input {
       width: 100%;
-      min-height: 44px;
-      padding: 11px 12px;
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      background: rgba(255, 255, 255, 0.8);
-      color: var(--ink);
-      font-size: 0.96rem;
-      outline: none;
+      padding: 12px 14px;
+      border-radius: 10px;
+      border: 1px solid #334155;
+      background: #0b1220;
+      color: var(--text);
+      font-size: 1rem;
     }
-
-    .setup input:focus {
-      border-color: rgba(10, 132, 255, 0.56);
-      box-shadow: 0 0 0 4px rgba(10, 132, 255, 0.12);
-    }
-
     .setup button {
-      min-height: 44px;
-      border: 0;
-      border-radius: 8px;
-      background: #111827;
-      color: #fff;
-      font-size: 0.96rem;
-      font-weight: 650;
-    }
-
-    .steps {
-      width: min(100%, 980px);
-      margin: 0 auto;
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 10px;
-      padding-bottom: 4px;
-    }
-
-    .step {
-      min-height: 86px;
-      padding: 14px;
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      background: rgba(255, 255, 255, 0.52);
-      backdrop-filter: blur(18px);
-    }
-
-    .step strong {
-      display: block;
-      margin-bottom: 6px;
-      font-size: 0.9rem;
-    }
-
-    .step span {
-      color: var(--muted);
-      font-size: 0.8rem;
-      line-height: 1.45;
-    }
-
-    @keyframes float {
-      0%, 100% { translate: 0 0; }
-      50% { translate: 0 -14px; }
-    }
-
-    @keyframes spin {
-      to { rotate: 360deg; }
-    }
-
-    @media (max-width: 760px) {
-      .page {
-        padding-inline: 16px;
-      }
-
-      .hero {
-        grid-template-columns: 1fr;
-        align-content: center;
-        padding-top: 20px;
-      }
-
-      .copy {
-        text-align: left;
-      }
-
-      .panel {
-        min-height: 420px;
-      }
-
-      .steps {
-        grid-template-columns: 1fr;
-      }
-
-      .step {
-        min-height: auto;
-      }
-    }
-
-    @media (prefers-reduced-motion: reduce) {
-      *,
-      *::before,
-      *::after {
-        animation: none !important;
-        transition: none !important;
-      }
+      margin-top: 4px;
+      padding: 12px;
+      border: none;
+      border-radius: 10px;
+      background: #334155;
+      color: var(--text);
+      font-size: 1rem;
     }
   </style>
 </head>
 <body>
-  <main class="page">
-    <header class="topbar">
-      <div class="brand">
-        <span class="brand-mark" aria-hidden="true"></span>
-        <span>Wake Quest</span>
-      </div>
-      <div class="signal">同一 WiFi</div>
-    </header>
+  <div class="wrap">
+    <div>
+      <h1>电脑亮屏</h1>
+      <p class="sub">关屏后微信断了？点下面按钮直接唤醒显示器</p>
+    </div>
 
-    <section class="hero" aria-label="电脑亮屏">
-      <div class="copy">
-        <div class="eyebrow">像素冒险入口</div>
-        <h1>电脑亮屏</h1>
-        <p class="sub">手机点一下，电脑屏幕醒来。界面保持干净、轻盈，像素元素只负责一点点游戏感。</p>
-      </div>
+    <button id="wakeBtn" type="button" aria-label="亮屏">亮屏</button>
+    <div id="status" role="status" aria-live="polite"></div>
 
-      <section class="panel" aria-label="亮屏控制面板">
-        <div class="scene" aria-hidden="true">
-          <div class="portal"></div>
-          <div class="pixel block one"></div>
-          <div class="pixel block two"></div>
-          <div class="pixel block three"></div>
-          <div class="pixel spark one"></div>
-          <div class="pixel spark two"></div>
-        </div>
+    <div id="setup" class="setup">
+      <label for="baseUrl">电脑地址（含端口）</label>
+      <input id="baseUrl" type="url" inputmode="url" placeholder="http://192.168.1.10:18790" autocomplete="off">
+      <label for="token">密钥 token</label>
+      <input id="token" type="text" inputmode="latin" placeholder="setup 脚本输出的 token" autocomplete="off">
+      <button id="saveBtn" type="button">保存并连接</button>
+    </div>
 
-        <div class="wake-card">
-          <button id="wakeBtn" type="button" aria-label="亮屏">亮屏</button>
-          <div id="status" role="status" aria-live="polite"></div>
-
-          <div id="setup" class="setup">
-            <label for="baseUrl">电脑地址</label>
-            <input id="baseUrl" type="url" inputmode="url" placeholder="http://192.168.1.10:18790" autocomplete="off">
-            <label for="token">连接密钥</label>
-            <input id="token" type="text" inputmode="latin" placeholder="setup 脚本输出的 token" autocomplete="off">
-            <button id="saveBtn" type="button">保存并连接</button>
-          </div>
-        </div>
-      </section>
-    </section>
-
-    <section class="steps" aria-label="使用状态">
-      <div class="step">
-        <strong>主屏幕</strong>
-        <span>Safari 或 Chrome 添加到主屏幕，像一个轻量 App。</span>
-      </div>
-      <div class="step">
-        <strong>本地通道</strong>
-        <span>请求只发给你的电脑地址，适合家里同一 WiFi。</span>
-      </div>
-      <div class="step">
-        <strong>快速恢复</strong>
-        <span>微信断开时，用这个页面先把电脑唤醒。</span>
-      </div>
-    </section>
-  </main>
+    <p class="hint" id="hint">
+      首次使用请用 setup-wake-mobile.ps1 生成的链接打开本页，或手动填写地址与 token。<br>
+      iOS：Safari 分享 → 添加到主屏幕；Android：Chrome 菜单 → 添加到主屏幕。
+    </p>
+  </div>
 
   <script>
     const LS_TOKEN = "wake_mobile_token";
@@ -496,11 +166,6 @@
       return p.get("t") || p.get("token") || "";
     }
 
-    function getQueryBase() {
-      const p = new URLSearchParams(location.search);
-      return normalizeBase(p.get("base") || "");
-    }
-
     function normalizeBase(url) {
       return (url || "").trim().replace(/\/+$/, "");
     }
@@ -509,22 +174,20 @@
       const qToken = getQueryToken();
       if (qToken) {
         localStorage.setItem(LS_TOKEN, qToken);
-      }
-      const qBase = getQueryBase();
-      if (qBase) localStorage.setItem(LS_BASE, qBase);
-      if ((qToken || qBase) && history.replaceState) {
-        history.replaceState({}, "", location.pathname);
+        if (history.replaceState) {
+          history.replaceState({}, "", location.pathname);
+        }
       }
       const token = localStorage.getItem(LS_TOKEN) || "";
       const base = normalizeBase(localStorage.getItem(LS_BASE) || location.origin);
       if (!token) {
         setupEl.classList.add("show");
         wakeBtn.disabled = true;
-        setStatus("请先配置连接密钥", "err");
+        setStatus("请先配置 token", "err");
       } else {
         setupEl.classList.remove("show");
         wakeBtn.disabled = false;
-        setStatus("就绪，点一下进入亮屏通道");
+        setStatus("就绪，同一 WiFi 下可亮屏");
       }
       baseInput.value = base;
       tokenInput.value = token;
@@ -535,14 +198,14 @@
       const base = normalizeBase(baseInput.value);
       const token = tokenInput.value.trim();
       if (!base || !token) {
-        setStatus("请填写电脑地址和连接密钥", "err");
+        setStatus("请填写地址和 token", "err");
         return;
       }
       localStorage.setItem(LS_BASE, base);
       localStorage.setItem(LS_TOKEN, token);
       setupEl.classList.remove("show");
       wakeBtn.disabled = false;
-      setStatus("已保存，可以亮屏", "ok");
+      setStatus("已保存，可以亮屏");
     });
 
     async function wake() {
@@ -550,13 +213,14 @@
       if (!token) return;
 
       wakeBtn.disabled = true;
-      setStatus("正在唤醒...");
+      setStatus("正在唤醒…");
 
+      const url = base + "/api/wake";
       const ctrl = new AbortController();
       const timer = setTimeout(() => ctrl.abort(), 15000);
 
       try {
-        const res = await fetch(base + "/api/wake", {
+        const res = await fetch(url, {
           method: "POST",
           headers: {
             "Authorization": "Bearer " + token,
@@ -571,14 +235,14 @@
           if (navigator.vibrate) navigator.vibrate(80);
         } else if (res.status === 401) {
           setupEl.classList.add("show");
-          setStatus("密钥无效，请重新配置", "err");
+          setStatus("token 无效，请重新配置", "err");
         } else {
           setStatus(data.error || data.message || ("失败 " + res.status), "err");
         }
       } catch (e) {
         const msg = e.name === "AbortError"
-          ? "连接超时，电脑可能仍在休眠"
-          : "无法连接电脑，请确认同一 WiFi";
+          ? "超时：关屏后网卡可能休眠。请在电脑上以管理员运行 scripts\\install-fix-screen-off-network.bat，或先手动点亮屏幕"
+          : "无法连接电脑：请同一 WiFi，或关屏后网卡已休眠（需电脑端修复）";
         setStatus(msg, "err");
       } finally {
         clearTimeout(timer);
