@@ -3,6 +3,7 @@
 param()
 
 $ErrorActionPreference = "Continue"
+. (Join-Path $PSScriptRoot "utf8-console.ps1")
 
 $def = @'
 [DllImport("kernel32.dll", CharSet = CharSet.Auto, SetLastError = true)]

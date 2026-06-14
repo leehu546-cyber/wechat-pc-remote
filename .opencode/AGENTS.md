@@ -27,6 +27,7 @@ WeChat 只显示纯文本。结论先行，大白话，禁止 Markdown（无 `##
 - 非股票任务：**从上表选固定句式**，总字数 ≤120（可补半句，禁止教程/步骤复述）
 - 脚本若输出 `WECHAT_USER_REPLY:`，**原样转发**该行内容
 - 禁止把多段内容挤成一行；禁止重复同一信息
+- **乱码防护：** 加载 `wechat-encoding-safety`；含中文脚本须 UTF-8 BOM + `utf8-console.ps1`；**禁止 Agent 凭记忆重打中文**，必须原样转发 `WECHAT_STOCK_CARD` / `WECHAT_USER_REPLY`
 
 
 This PC is the user's Windows workstation. Assume the user wants practical local control from WeChat, not a generic chat answer, when they ask to open, view, play, screenshot, wake, lock, unlock, write, or inspect something.
@@ -55,6 +56,7 @@ This PC is the user's Windows workstation. Assume the user wants practical local
 | `wechat-task-orchestrator` | 复合电脑控制任务 / 需要打开给我看 / 发截图确认 / 检查是否成功 | Brain-only Plan -> Act -> Verify -> Report collaboration protocol. |
 | `wechat-desktop-interaction` | 打开应用并在输入框/搜索框/正文区输入文字 | One call: `scripts/desktop-interact.ps1` with app profile. |
 | `wechat-stock-info` | 股票信息 / 查股票 / 持仓 / 510300 | One call: `scripts/stock-info.ps1`, then **verbatim mini** `WECHAT_STOCK_CARD` |
+| `wechat-encoding-safety` | 乱码 / 编写含中文 ps1 / 微信中文显示异常 | UTF-8 BOM + `utf8-console.ps1`；禁止 Agent 重打中文 |
 | fixed file opener | 打开这个文件 / 打开 Word / 打开 markdown / 打开刚才文档 | One call: `scripts/open-file-fast.ps1` with `-Kind word`, `-Kind markdown`, or default. |
 
 ## Local decision rule

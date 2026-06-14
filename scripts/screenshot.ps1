@@ -4,6 +4,7 @@ param(
 )
 
 $ErrorActionPreference = "Continue"
+. (Join-Path $PSScriptRoot "utf8-console.ps1")
 $weclaw = "D:\cursor\61\weclaw\weclaw.exe"
 $user = "o9cq801Ug93dPoIRZhHYx0dqwYuA@im.wechat"
 $dir = Join-Path $env:TEMP "wechat_screenshots"

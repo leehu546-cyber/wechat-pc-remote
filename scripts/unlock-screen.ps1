@@ -4,6 +4,7 @@
 param()
 
 $ErrorActionPreference = "Continue"
+. (Join-Path $PSScriptRoot "utf8-console.ps1")
 
 $debugLog = Join-Path $env:TEMP ("unlock_screen_{0}.log" -f (Get-Date -Format "yyyyMMdd_HHmmss"))
 function Log-Unlock {

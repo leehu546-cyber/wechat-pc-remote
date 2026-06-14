@@ -2,6 +2,7 @@
 param()
 
 $ErrorActionPreference = "Stop"
+. (Join-Path $PSScriptRoot "utf8-console.ps1")
 
 $configPath = Join-Path $env:USERPROFILE ".weclaw\stock-portfolio.json"
 if (-not (Test-Path $configPath)) {
@@ -19,25 +20,42 @@ $takePct = if ($cfg.take_profit_pct) { [double]$cfg.take_profit_pct } else { 5.0
 
 $fetchedAt = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
 
-$secid = "1.$code"
-$quoteUrl = "https://push2.eastmoney.com/api/qt/stock/get?secid=$secid&fields=f43,f44,f45,f46,f47,f48,f60,f169,f170"
+$sourcesScript = Join-Path $PSScriptRoot "stock-quote-sources.ps1"
+if (-not (Test-Path $sourcesScript)) {
+    Write-Host "WECHAT_FAIL: 缺少 stock-quote-sources.ps1"
+    exit 1
+}
+. $sourcesScript
+
+$secid = Get-StockSecId $code
 
 try {
-    $resp = Invoke-RestMethod -Uri $quoteUrl -TimeoutSec 12
-    $d = $resp.data
-    if (-not $d) { throw "empty quote data" }
-    $price = [math]::Round($d.f43 / 1000, 3)
-    $change = [math]::Round($d.f169 / 1000, 3)
-    $changePct = [math]::Round($d.f170 / 100, 2)
-    $high = [math]::Round($d.f44 / 1000, 3)
-    $low = [math]::Round($d.f45 / 1000, 3)
-    $preClose = [math]::Round($d.f60 / 1000, 3)
-    $volume = [long]$d.f47
-    $amount = [math]::Round($d.f48 / 1e8, 2)
+    $merged = Get-StockQuoteMerged -Code $code -TimeoutSec 10
+    $price = [double]$merged.Price
+    $changePct = [double]$merged.ChangePct
+    $high = [double]$merged.High
+    $low = [double]$merged.Low
+    $preClose = [double]$merged.PreClose
+    $change = [math]::Round($price - $preClose, 3)
+    $primarySource = [string]$merged.PrimarySource
+    $sourceCount = [int]$merged.SourceCount
+    $sourcesUsed = [string]$merged.Sources
+    $quoteConsistent = [bool]$merged.Consistent
+    if ($sourceCount -ge 2 -and $quoteConsistent) {
+        $sourceLabel = "$sourceCount 源一致 ($sourcesUsed)"
+    } elseif ($sourceCount -ge 2) {
+        $spread = [math]::Round([double]$merged.SpreadPct, 2)
+        $sourceLabel = "$sourceCount 源分歧 ${spread}% ($sourcesUsed)"
+    } else {
+        $sourceLabel = $primarySource
+    }
 } catch {
     Write-Host "WECHAT_FAIL: 无法获取行情 ($($_.Exception.Message))"
     exit 1
 }
+
+$volume = 0L
+$amount = 0.0
 
 $pl = [math]::Round(($price - $cost) * $shares, 2)
 $plPct = if ($cost -ne 0) { [math]::Round(($price - $cost) / $cost * 100, 2) } else { 0 }
@@ -126,12 +144,25 @@ Write-Host "stop_triggered=$stopTriggered"
 Write-Host "take_triggered=$takeTriggered"
 Write-Host "k5_trend=$k5Trend"
 Write-Host "k5_change_pct=$k5ChangePct"
-Write-Host "source=eastmoney_push2"
+Write-Host "source=$primarySource"
+Write-Host "quote_sources=$sourcesUsed"
+Write-Host "quote_source_count=$sourceCount"
+Write-Host "quote_consistent=$quoteConsistent"
+Write-Host "quote_source_label=$sourceLabel"
 
-# WeChat mini card (4 lines, plain text — user-visible)
+# WeChat card (multiline with blank lines — user-visible)
 Write-Host ""
 Write-Host "WECHAT_STOCK_CARD:"
 Write-Host "$code $name"
-Write-Host ('现价 {0} ({1}{2}%)  盈亏 {3}{4}元 ({3}{5}%)' -f $price, $changeSign, $changePct, $plSign, $pl, $plPct)
-Write-Host "建议 $actionLabel  风控 $riskStatus"
+Write-Host ""
+Write-Host ('现价 {0} ({1}{2}%)' -f $price, $changeSign, $changePct)
+Write-Host ('盈亏 {0}{1}元 ({0}{2}%)' -f $plSign, $pl, $plPct)
+Write-Host ""
+Write-Host "建议 $actionLabel"
+Write-Host ""
+Write-Host "风控 $riskStatus"
+Write-Host "成本 $cost × ${shares}股"
+Write-Host "今高 $high  今低 $low  昨收 $preClose"
+Write-Host "来源 $sourceLabel"
+Write-Host ""
 Write-Host "抓取 $fetchedAt"
