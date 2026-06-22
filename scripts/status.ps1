@@ -1,6 +1,6 @@
-# Check WeClaw + OpenCode bridge status
+# Check WeClaw bridge status
 Write-Host ""
-Write-Host "=== WeClaw + OpenCode Status ===" -ForegroundColor Cyan
+Write-Host "=== WeClaw Status ===" -ForegroundColor Cyan
 
 $weclaw = Join-Path $PSScriptRoot "..\weclaw\weclaw.exe"
 . (Join-Path $PSScriptRoot "keep-awake-util.ps1")
@@ -37,10 +37,17 @@ if ($weclawProc) {
 }
 
 try {
-    $ocVer = opencode --version 2>&1
-    Write-Host "[ok] OpenCode $ocVer" -ForegroundColor Green
+    $cxVer = codex --version 2>&1
+    Write-Host "[ok] Codex $cxVer" -ForegroundColor Green
 } catch {
-    Write-Host "[--] OpenCode not installed" -ForegroundColor Red
+    Write-Host "[--] Codex not installed" -ForegroundColor Red
+}
+
+$deepseekKeyPath = Join-Path $env:USERPROFILE ".weclaw\deepseek.json"
+if ($env:DEEPSEEK_API_KEY -or (Test-Path $deepseekKeyPath)) {
+    Write-Host "[ok] DeepSeek API key configured" -ForegroundColor Green
+} else {
+    Write-Host "[!!] DeepSeek API key missing — run scripts\setup-deepseek-key.ps1" -ForegroundColor Red
 }
 
 $weclawConfig = Join-Path $env:USERPROFILE ".weclaw\config.json"
@@ -48,9 +55,10 @@ if (Test-Path $weclawConfig) {
     try {
         $wc = Get-Content $weclawConfig -Raw -Encoding UTF8 | ConvertFrom-Json
         $agent = $wc.default_agent
-        $model = $wc.agents.opencode.model
-        $cwd = $wc.agents.opencode.cwd
-        Write-Host "[ok] default_agent: $agent | model: $model | cwd: $cwd" -ForegroundColor Green
+        $router = $wc.routing.router_agent
+        $specialist = $wc.routing.specialist_agent
+        $cwd = $wc.agents.codex.cwd
+        Write-Host "[ok] default=$agent | router=$router | specialist=$specialist | cwd=$cwd" -ForegroundColor Green
     } catch {
         Write-Host "[..] weclaw config present but unreadable" -ForegroundColor Yellow
     }

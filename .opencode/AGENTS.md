@@ -8,9 +8,9 @@
 
 | 阶段 | 组件 | 做什么 |
 |------|------|--------|
-| 1 分类 | `agents.router`（独立 ACP 会话） | 只输出 JSON：`domain` + `action` |
-| 2 执行 | WeClaw Go | 简单动作直跑 `scripts/*.ps1`；解锁跑 delegate；其余进 Specialist |
-| 3 专家 | `agents.opencode`（Specialist） | OCR 总结、复合任务、文件/浏览器/文档 |
+| 1 分类 | `agents.deepseek-router`（HTTP → api.deepseek.com） | 只输出 JSON：`domain` + `action` |
+| 2 执行 | WeClaw Go | 简单动作直跑 `scripts/*.ps1`；解锁跑 delegate |
+| 3 专家 | `agents.codex`（Codex ACP） | 复合任务、文件、浏览器、文档 |
 
 | 必须经过 DeepSeek | 不得用关键词/本地规则代替 |
 |-------------------|---------------------------|

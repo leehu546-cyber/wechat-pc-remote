@@ -1,28 +1,51 @@
-# Initialize WeClaw config: default agent = OpenCode (ACP)
-# Merges defaults into existing config without overwriting user-tuned routing/progress.
+# Initialize WeClaw: DeepSeek HTTP Router + Codex Specialist (no OpenCode)
+# Merges defaults into ~/.weclaw/config.json
 $ErrorActionPreference = "Stop"
 
 $projectRoot = Split-Path $PSScriptRoot -Parent
 $workDir = $projectRoot
-$model = "deepseek/deepseek-v4-flash"
+$deepseekModel = "deepseek-chat"
+$deepseekEndpoint = "https://api.deepseek.com/v1/chat/completions"
 
-Write-Host "=== WeClaw + OpenCode init ===" -ForegroundColor Cyan
+Write-Host "=== WeClaw init (DeepSeek HTTP + Codex) ===" -ForegroundColor Cyan
 
-$opencodeCmd = Join-Path $env:APPDATA "npm\opencode.cmd"
-if (-not (Test-Path $opencodeCmd)) {
-    $opencodeCmd = (Get-Command opencode -ErrorAction Stop).Source
+$codexCmd = Join-Path $env:APPDATA "npm\codex.cmd"
+if (-not (Test-Path $codexCmd)) {
+    $codexCmd = (Get-Command codex -ErrorAction Stop).Source
 }
-Write-Host "OpenCode: $opencodeCmd" -ForegroundColor Green
+Write-Host "Codex: $codexCmd" -ForegroundColor Green
 
 $weclawDir = Join-Path $env:USERPROFILE ".weclaw"
 $configPath = Join-Path $weclawDir "config.json"
+$deepseekKeyPath = Join-Path $weclawDir "deepseek.json"
 New-Item -ItemType Directory -Path $weclawDir -Force | Out-Null
 
-$cmdEscaped = $opencodeCmd -replace '\\', '\\'
-$workEscaped = $workDir -replace '\\', '\\'
+function Get-DeepSeekApiKey {
+    if ($env:DEEPSEEK_API_KEY -and $env:DEEPSEEK_API_KEY.Trim()) {
+        return $env:DEEPSEEK_API_KEY.Trim()
+    }
+    if (Test-Path $deepseekKeyPath) {
+        try {
+            $k = Get-Content $deepseekKeyPath -Raw -Encoding UTF8 | ConvertFrom-Json
+            if ($k.api_key -and $k.api_key.ToString().Trim()) {
+                return $k.api_key.ToString().Trim()
+            }
+        } catch { }
+    }
+    return $null
+}
+
+$deepseekKey = Get-DeepSeekApiKey
+if (-not $deepseekKey) {
+    Write-Host "WARNING: No DeepSeek API key." -ForegroundColor Yellow
+    Write-Host "  Set env DEEPSEEK_API_KEY or run: scripts\setup-deepseek-key.ps1" -ForegroundColor Yellow
+} else {
+    Write-Host "DeepSeek API key: OK (from $(if ($env:DEEPSEEK_API_KEY) { 'env' } else { 'deepseek.json' }))" -ForegroundColor Green
+}
+
 $routerPrompt = @(
     'You are WeClaw Router — a JSON-only intent classifier for WeChat PC-control messages.',
-    'Output EXACTLY one JSON object, no markdown, no explanation, no tools.',
+    'Output EXACTLY one JSON object, no markdown, no explanation.',
     'Schema: {"domain":"screen|file|browser|doc|sys|info|compound|chat","action":"screenshot|ocr|wake|off|unlock|open_file|music|desktop_typing|stock|orchestrate|chat","compound":false,"params":{}}',
     'Rules: 检索/看屏幕上有什么/读屏幕文字 → domain=screen action=ocr. 截图 → screenshot. 亮屏/开屏 → wake. 关屏/熄屏 → off.',
     '解锁/解除锁屏/进桌面/锁屏输密码 → domain=sys action=unlock. Plain 锁屏 alone is NOT unlock — use action=chat domain=chat.',
@@ -32,21 +55,15 @@ $routerPrompt = @(
 ) -join ' '
 
 $specialistPrompt = @(
-    'You are WeClaw Specialist — execution brain AFTER the Router has classified intent.',
+    'You are WeClaw Specialist (Codex) — execution brain AFTER the Router classified intent.',
     'WeClaw Router already chose domain/action; follow [ROUTER:...] prefix in the user message.',
-    'Load the indicated weclaw-*-agent skill, then run ONE fixed script or output WECLAW_DELEGATE for unlock.',
-    'Read .opencode/AGENTS.md for reply templates and script rules.',
-    'Compound tasks: load wechat-task-orchestrator, Plan->Act->Verify->Report in one WeChat turn.',
-    'OCR summary-only turns: user message says OCR already ran — summarize in ≤40 Chinese chars, no tools.',
-    'UNLOCK: only when [ROUTER:sys/unlock] or user clearly wants unlock — output exactly: WECLAW_DELEGATE: openclaw-unlocker. Never bash unlock-screen.ps1.',
-    'STOCK: run scripts/stock-info.ps1 once; reply = verbatim mini WECHAT_STOCK_CARD from stdout.',
-    'Prefer WECHAT_USER_REPLY from script stdout; never retype Chinese stock card text.',
-    'Emit WECHAT_PROGRESS: <step> for multi-step work. Final reply ≤120 chars except stock card.',
-    'Encoding: Chinese scripts use UTF-8 BOM + scripts/utf8-console.ps1.'
+    'Working directory: D:\cursor\61. Read .opencode/AGENTS.md and load the indicated weclaw-*-agent skill.',
+    'Run ONE fixed script under scripts/ or output WECLAW_DELEGATE: openclaw-unlocker for unlock. Never bash unlock-screen.ps1.',
+    'Compound tasks: load wechat-task-orchestrator; Plan->Act->Verify->Report in one WeChat turn.',
+    'STOCK: scripts/stock-info.ps1 once; reply = verbatim mini WECHAT_STOCK_CARD from stdout.',
+    'Prefer WECHAT_USER_REPLY from script stdout. Final reply ≤120 chars except stock card.',
+    'Emit WECHAT_PROGRESS: <step> for multi-step work.'
 ) -join ' '
-
-# Legacy name kept for opencode agent block below
-$prompt = $specialistPrompt
 
 $utf8NoBom = New-Object System.Text.UTF8Encoding $false
 
@@ -61,13 +78,12 @@ $defaultRouting = @{
     simple_bypass    = $false
     cancel_previous  = $false
     router_enabled   = $true
-    router_agent     = "router"
-    specialist_agent = "opencode"
+    router_agent     = "deepseek-router"
+    specialist_agent = "codex"
 }
-$everosDisabled = $false
 $defaultMemory = @{
     everos = @{
-        enabled          = $everosDisabled
+        enabled          = $false
         base_url         = "http://127.0.0.1:8080"
         top_k            = 5
         method           = "keyword"
@@ -84,46 +100,46 @@ $defaultUnlocker = @{
     timeout_sec = 45
 }
 
-function Ensure-RouterAgents {
+function Ensure-DeepSeekCodexAgents {
     param(
         [object]$Cfg,
-        [string]$OpenCodeCmd,
+        [string]$CodexCmd,
         [string]$WorkDir,
-        [string]$Model
+        [string]$ApiKey
     )
     if (-not $Cfg.agents) {
         $Cfg | Add-Member -NotePropertyName agents -NotePropertyValue (@{})
     }
-    if (-not $Cfg.agents.router) {
-        $Cfg.agents | Add-Member -NotePropertyName router -NotePropertyValue ([pscustomobject]@{
-            type = "acp"; command = $OpenCodeCmd; args = @("acp"); cwd = $WorkDir; model = $Model
-            system_prompt = $routerPrompt
-        })
-        Write-Host "Added router agent (JSON-only classifier)" -ForegroundColor Yellow
-    } else {
-        $Cfg.agents.router | Add-Member -NotePropertyName system_prompt -NotePropertyValue $routerPrompt -Force
-        if (-not $Cfg.agents.router.command) {
-            $Cfg.agents.router | Add-Member -NotePropertyName command -NotePropertyValue $OpenCodeCmd -Force
-        }
-        if (-not $Cfg.agents.router.cwd) {
-            $Cfg.agents.router | Add-Member -NotePropertyName cwd -NotePropertyValue $WorkDir -Force
-        }
-        if (-not $Cfg.agents.router.model) {
-            $Cfg.agents.router | Add-Member -NotePropertyName model -NotePropertyValue $Model -Force
-        }
+
+    $routerCfg = [ordered]@{
+        type          = "http"
+        endpoint      = $deepseekEndpoint
+        model         = $deepseekModel
+        system_prompt = $routerPrompt
     }
+    if ($ApiKey) { $routerCfg.api_key = $ApiKey }
+
+    $Cfg.agents | Add-Member -NotePropertyName "deepseek-router" -NotePropertyValue ([pscustomobject]$routerCfg) -Force
+    Write-Host "Configured deepseek-router (HTTP JSON classifier)" -ForegroundColor Green
+
+    $codexArgs = @("app-server", "--listen", "stdio://")
+    $codexCfg = [ordered]@{
+        type          = "acp"
+        command       = $CodexCmd
+        args          = $codexArgs
+        cwd           = $WorkDir
+        system_prompt = $specialistPrompt
+    }
+    $Cfg.agents | Add-Member -NotePropertyName codex -NotePropertyValue ([pscustomobject]$codexCfg) -Force
+    Write-Host "Configured codex specialist (ACP app-server)" -ForegroundColor Green
+
+    $Cfg.default_agent = "codex"
     if (-not $Cfg.routing) {
         $Cfg | Add-Member -NotePropertyName routing -NotePropertyValue ([pscustomobject]$defaultRouting)
     } else {
-        if ($null -eq $Cfg.routing.router_enabled) {
-            $Cfg.routing | Add-Member -NotePropertyName router_enabled -NotePropertyValue $true -Force
-        }
-        if (-not $Cfg.routing.router_agent) {
-            $Cfg.routing | Add-Member -NotePropertyName router_agent -NotePropertyValue "router" -Force
-        }
-        if (-not $Cfg.routing.specialist_agent) {
-            $Cfg.routing | Add-Member -NotePropertyName specialist_agent -NotePropertyValue "opencode" -Force
-        }
+        $Cfg.routing | Add-Member -NotePropertyName router_enabled -NotePropertyValue $true -Force
+        $Cfg.routing | Add-Member -NotePropertyName router_agent -NotePropertyValue "deepseek-router" -Force
+        $Cfg.routing | Add-Member -NotePropertyName specialist_agent -NotePropertyValue "codex" -Force
     }
 }
 
@@ -148,109 +164,50 @@ function Ensure-LocalUnlocker {
 
 if (Test-Path $configPath) {
     $cfg = Get-Content $configPath -Raw -Encoding UTF8 | ConvertFrom-Json
-    if (-not $cfg.agents) { $cfg | Add-Member -NotePropertyName agents -NotePropertyValue (@{}) }
-    if (-not $cfg.default_agent) { $cfg.default_agent = "opencode" }
-    if (-not $cfg.progress) {
-        $cfg | Add-Member -NotePropertyName progress -NotePropertyValue ([pscustomobject]$defaultProgress)
-    }
-    if ($cfg.progress.mode -ne "brain") {
-        $cfg.progress | Add-Member -NotePropertyName mode -NotePropertyValue "brain" -Force
-        Write-Host "Upgraded progress.mode → brain (API WECHAT_PROGRESS only)" -ForegroundColor Yellow
-    }
-    if (-not $cfg.routing) {
-        $cfg | Add-Member -NotePropertyName routing -NotePropertyValue ([pscustomobject]$defaultRouting)
-    } else {
-        if ($cfg.routing.simple_bypass -ne $false) {
-            $cfg.routing | Add-Member -NotePropertyName simple_bypass -NotePropertyValue $false -Force
-            Write-Host "Upgraded routing.simple_bypass → false (thin bridge, brain routes all)" -ForegroundColor Yellow
-        }
-        if ($cfg.routing.cancel_previous -ne $false) {
-            $cfg.routing | Add-Member -NotePropertyName cancel_previous -NotePropertyValue $false -Force
-            Write-Host "Upgraded routing.cancel_previous → false (avoid interrupting multi-turn chat)" -ForegroundColor Yellow
-        }
-        if ($null -eq $cfg.routing.router_enabled) {
-            $cfg.routing | Add-Member -NotePropertyName router_enabled -NotePropertyValue $true -Force
-            Write-Host "Added routing.router_enabled → true (Plan A two-stage router)" -ForegroundColor Yellow
-        }
-        if (-not $cfg.routing.router_agent) {
-            $cfg.routing | Add-Member -NotePropertyName router_agent -NotePropertyValue "router" -Force
-        }
-        if (-not $cfg.routing.specialist_agent) {
-            $cfg.routing | Add-Member -NotePropertyName specialist_agent -NotePropertyValue "opencode" -Force
-        }
-    }
-    if (-not $cfg.memory) {
-        $cfg | Add-Member -NotePropertyName memory -NotePropertyValue ([pscustomobject]$defaultMemory)
-        Write-Host "Added memory defaults (everos off, local chat-log on)" -ForegroundColor Yellow
-    } else {
-        if (-not $cfg.memory.everos) {
-            $cfg.memory | Add-Member -NotePropertyName everos -NotePropertyValue ([pscustomobject]$defaultMemory.everos)
-        }
-        if (-not $cfg.memory.local) {
-            $cfg.memory | Add-Member -NotePropertyName local -NotePropertyValue ([pscustomobject]$defaultMemory.local)
-            Write-Host "Added memory.local chat-log defaults" -ForegroundColor Yellow
-        }
-        if ($cfg.memory.everos.enabled -eq $true) {
-            $cfg.memory.everos.enabled = $false
-            Write-Host "Set memory.everos.enabled → false (local chat-log only)" -ForegroundColor Yellow
-        }
-        if ($cfg.memory.everos.method -eq "hybrid" -and $defaultMemory.everos.method -eq "keyword") {
-            $cfg.memory.everos.method = "keyword"
-            Write-Host "Downgraded memory.everos.method hybrid→keyword" -ForegroundColor Yellow
-        }
-    }
-    if (-not $cfg.agents.opencode) {
-        $cfg.agents | Add-Member -NotePropertyName opencode -NotePropertyValue ([pscustomobject]@{
-            type = "acp"; command = $opencodeCmd; args = @("acp"); cwd = $workDir; model = $model
-            system_prompt = $prompt
-        })
-    } else {
-        if (-not $cfg.agents.opencode.command) {
-            $cfg.agents.opencode | Add-Member -NotePropertyName command -NotePropertyValue $opencodeCmd -Force
-        }
-        if (-not $cfg.agents.opencode.cwd) {
-            $cfg.agents.opencode | Add-Member -NotePropertyName cwd -NotePropertyValue $workDir -Force
-        }
-        if (-not $cfg.agents.opencode.model) {
-            $cfg.agents.opencode | Add-Member -NotePropertyName model -NotePropertyValue $model -Force
-        }
-        $cfg.agents.opencode | Add-Member -NotePropertyName system_prompt -NotePropertyValue $specialistPrompt -Force
-    }
-    Ensure-RouterAgents -Cfg $cfg -OpenCodeCmd $opencodeCmd -WorkDir $workDir -Model $model
-    Ensure-LocalUnlocker -Cfg $cfg
-    $json = $cfg | ConvertTo-Json -Depth 6
-    [System.IO.File]::WriteAllText($configPath, $json, $utf8NoBom)
-    Write-Host "Merged defaults into $configPath (existing progress/routing preserved)" -ForegroundColor Green
 } else {
-    $cfg = [ordered]@{
-        default_agent = "opencode"
-        progress      = $defaultProgress
-        routing       = $defaultRouting
-        memory        = $defaultMemory
-        unlocker      = $defaultUnlocker
-        agents        = [ordered]@{
-            router = [ordered]@{
-                type          = "acp"
-                command       = $opencodeCmd
-                args          = @("acp")
-                cwd           = $workDir
-                model         = $model
-                system_prompt = $routerPrompt
-            }
-            opencode = [ordered]@{
-                type          = "acp"
-                command       = $opencodeCmd
-                args          = @("acp")
-                cwd           = $workDir
-                model         = $model
-                system_prompt = $specialistPrompt
-            }
-        }
+    $cfg = [pscustomobject]@{
+        progress = [pscustomobject]$defaultProgress
+        memory   = [pscustomobject]$defaultMemory
+        agents   = @{}
     }
-    Ensure-LocalUnlocker -Cfg $cfg
-    $json = $cfg | ConvertTo-Json -Depth 6
-    [System.IO.File]::WriteAllText($configPath, $json, $utf8NoBom)
-    Write-Host "Wrote $configPath" -ForegroundColor Green
+}
+
+if (-not $cfg.progress) {
+    $cfg | Add-Member -NotePropertyName progress -NotePropertyValue ([pscustomobject]$defaultProgress)
+}
+if ($cfg.progress.mode -ne "brain") {
+    $cfg.progress | Add-Member -NotePropertyName mode -NotePropertyValue "brain" -Force
+}
+if (-not $cfg.routing) {
+    $cfg | Add-Member -NotePropertyName routing -NotePropertyValue ([pscustomobject]$defaultRouting)
+} else {
+    $cfg.routing | Add-Member -NotePropertyName simple_bypass -NotePropertyValue $false -Force
+    $cfg.routing | Add-Member -NotePropertyName cancel_previous -NotePropertyValue $false -Force
+}
+if (-not $cfg.memory) {
+    $cfg | Add-Member -NotePropertyName memory -NotePropertyValue ([pscustomobject]$defaultMemory)
+}
+if ($cfg.memory.everos -and $cfg.memory.everos.enabled -eq $true) {
+    $cfg.memory.everos.enabled = $false
+}
+
+Ensure-DeepSeekCodexAgents -Cfg $cfg -CodexCmd $codexCmd -WorkDir $workDir -ApiKey $deepseekKey
+Ensure-LocalUnlocker -Cfg $cfg
+
+$json = $cfg | ConvertTo-Json -Depth 6
+[System.IO.File]::WriteAllText($configPath, $json, $utf8NoBom)
+Write-Host "Wrote $configPath" -ForegroundColor Green
+
+Write-Host "  default_agent: codex"
+Write-Host "  router: deepseek-router (HTTP $deepseekModel)"
+Write-Host "  specialist: codex (ACP)"
+Write-Host "  cwd: $workDir"
+Write-Host "  routing.router_enabled: true"
+Write-Host ""
+if (-not $deepseekKey) {
+    Write-Host "Next: scripts\setup-deepseek-key.ps1  then  scripts\restart-weclaw.ps1" -ForegroundColor Yellow
+} else {
+    Write-Host "Next: scripts\restart-weclaw.ps1" -ForegroundColor Cyan
 }
 
 # Migrate legacy wechat-local-chat credentials if WeClaw has none
@@ -270,33 +227,3 @@ if (-not (Test-Path $accountsDir) -and (Test-Path $legacyCred)) {
     [System.IO.File]::WriteAllText($credPath, $weclawCred, $utf8NoBom)
     Write-Host "Migrated WeChat credentials from wechat-local-chat" -ForegroundColor Green
 }
-
-if (Test-Path $accountsDir) {
-    Get-ChildItem $accountsDir -Filter "*.json" | ForEach-Object {
-        try {
-            $c = Get-Content $_.FullName -Raw -Encoding UTF8 | ConvertFrom-Json
-            if ($c.bot_token) {
-                $fixed = @{
-                    bot_token     = $c.bot_token
-                    ilink_bot_id  = $c.ilink_bot_id
-                    baseurl       = $c.baseurl
-                    ilink_user_id = $c.ilink_user_id
-                } | ConvertTo-Json -Compress
-                [System.IO.File]::WriteAllText($_.FullName, $fixed, $utf8NoBom)
-            }
-        } catch { }
-    }
-}
-Write-Host "  default_agent: opencode"
-Write-Host "  model: $model"
-Write-Host "  cwd: $workDir"
-Write-Host "  progress: mode=$($defaultProgress.mode), enabled=$($defaultProgress.enabled), start_delay=$($defaultProgress.start_delay_sec)s"
-Write-Host "  routing.simple_bypass: $($defaultRouting.simple_bypass) (thin bridge)"
-Write-Host "  routing.cancel_previous: $($defaultRouting.cancel_previous)"
-Write-Host "  routing.router_enabled: $($defaultRouting.router_enabled) (Plan A: router → dispatch)"
-Write-Host "  routing.router_agent: $($defaultRouting.router_agent)"
-Write-Host "  routing.specialist_agent: $($defaultRouting.specialist_agent)"
-Write-Host "  memory.everos: enabled=$($defaultMemory.everos.enabled)"
-Write-Host "  memory.local: enabled=$($defaultMemory.local.enabled), max_turns=$($defaultMemory.local.max_turns)"
-Write-Host ""
-Write-Host "Next: weclaw start (scan QR on first run)" -ForegroundColor Cyan

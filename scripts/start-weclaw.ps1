@@ -12,7 +12,7 @@ if ($wakeServer) {
     Write-Host "wake-server pid=$($wakeServer.Id) port=$wakePort (mobile亮屏)" -ForegroundColor Green
 }
 
-# Start WeClaw WeChat bridge (default agent: OpenCode ACP)
+# Start WeClaw WeChat bridge (DeepSeek HTTP router + Codex specialist)
 $weclaw = Join-Path $PSScriptRoot "..\weclaw\weclaw.exe"
 if (-not (Test-Path $weclaw)) {
     Write-Error "weclaw.exe not found. Build: cd weclaw && go build -o weclaw.exe ."
@@ -42,6 +42,6 @@ if (-not (Test-WatchdogRunning)) {
     if ($wd) { Write-Host "watchdog daemon pid=$($wd.Id) (hidden)" -ForegroundColor Green }
 }
 
-Write-Host "Starting WeClaw (default: OpenCode)... Scan QR on first run." -ForegroundColor Cyan
+Write-Host "Starting WeClaw (DeepSeek router + Codex specialist)..." -ForegroundColor Cyan
 & $weclaw start
 
