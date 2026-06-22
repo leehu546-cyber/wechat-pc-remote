@@ -1,4 +1,4 @@
-# unlock-screen.ps1 - wake display + unlock Windows lock screen (canonical, do not edit in chat)
+﻿# unlock-screen.ps1 - wake display + unlock Windows lock screen (canonical, do not edit in chat)
 # Verified: optional hodor pipe, else schtasks current USER + unlock-sendkeys.ps1 (HIGHEST, else LIMITED).
 # Reports WECHAT_OK only after unlock-verify.ps1 passes.
 param()

@@ -150,19 +150,11 @@ Write-Host "quote_source_count=$sourceCount"
 Write-Host "quote_consistent=$quoteConsistent"
 Write-Host "quote_source_label=$sourceLabel"
 
-# WeChat card (multiline with blank lines — user-visible)
+# WeChat card (compact lines — user-visible)
 Write-Host ""
 Write-Host "WECHAT_STOCK_CARD:"
 Write-Host "$code $name"
-Write-Host ""
-Write-Host ('现价 {0} ({1}{2}%)' -f $price, $changeSign, $changePct)
-Write-Host ('盈亏 {0}{1}元 ({0}{2}%)' -f $plSign, $pl, $plPct)
-Write-Host ""
-Write-Host "建议 $actionLabel"
-Write-Host ""
-Write-Host "风控 $riskStatus"
-Write-Host "成本 $cost × ${shares}股"
-Write-Host "今高 $high  今低 $low  昨收 $preClose"
+Write-Host ('现价 {0} ({1}{2}%)  盈亏 {3}{4}元 ({3}{5}%)' -f $price, $changeSign, $changePct, $plSign, $pl, $plPct)
+Write-Host "建议 $actionLabel  风控 $riskStatus"
 Write-Host "来源 $sourceLabel"
-Write-Host ""
 Write-Host "抓取 $fetchedAt"

@@ -30,7 +30,7 @@ public static class UnlockVerify {
         if (cls.IndexOf("LogonUI", StringComparison.OrdinalIgnoreCase) >= 0) return false;
         if (cls.IndexOf("Windows.UI.Core.CoreWindow", StringComparison.OrdinalIgnoreCase) >= 0
             && cls.IndexOf("Lock", StringComparison.OrdinalIgnoreCase) >= 0) return false;
-        return false;
+        return true;
     }
 }
 "@

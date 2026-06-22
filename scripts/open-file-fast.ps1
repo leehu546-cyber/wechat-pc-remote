@@ -5,6 +5,7 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+. (Join-Path $PSScriptRoot "utf8-console.ps1")
 
 $workspace = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 $desktop = [Environment]::GetFolderPath("Desktop")
@@ -57,10 +58,13 @@ if (-not $target) {
 }
 
 if (-not $target) {
-    Write-Host "WECHAT_ERROR: file_not_found"
+    Write-Host "WECHAT_FAIL: 找不到可打开的文件"
+    Write-Host "WECHAT_USER_REPLY: 没做成：找不到可打开的文件。"
     exit 1
 }
 
 Start-Process -FilePath $target
+$name = Split-Path -Leaf $target
 Write-Host "WECHAT_OK: opened $target"
+Write-Host "WECHAT_USER_REPLY: 已打开：$name"
 

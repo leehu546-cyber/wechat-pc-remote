@@ -1,6 +1,6 @@
 ---
 name: wechat-screen-ocr
-description: Use when the user wants to read or understand on-screen text without vision — 看下屏幕, 屏幕上有什么, 读取屏幕文字, 检索屏幕内容, OCR, 屏幕识别. Not for unlock (use wechat-screen-unlock).
+description: Use when the user wants to read or understand on-screen text — 看下屏幕, 屏幕上有什么, 读取屏幕文字, 检索, 检索屏幕内容, OCR. NOT unlock, NOT screenshot.
 ---
 
 # 微信屏幕 OCR (wechat-screen-ocr)

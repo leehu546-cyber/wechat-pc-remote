@@ -1,4 +1,4 @@
-# turn-off-screen.ps1 - turn display off (monitor power off)
+﻿# turn-off-screen.ps1 - turn display off (monitor power off)
 # SendNotifyMessage (not SendMessage) — broadcast SendMessage can block on unresponsive windows.
 #
 # One-shot SetThreadExecutionState below helps L3 (Agent bash during this prompt turn only).
