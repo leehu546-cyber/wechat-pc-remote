@@ -20,27 +20,33 @@ New-Item -ItemType Directory -Path $weclawDir -Force | Out-Null
 
 $cmdEscaped = $opencodeCmd -replace '\\', '\\'
 $workEscaped = $workDir -replace '\\', '\\'
-$prompt = @(
-    'SINGLE API (mandatory): All natural-language understanding uses this DeepSeek brain only. WeClaw bridge has NO keyword routing and NO second LLM. Never assume the bridge will classify intent.',
-    'Every NL message: load weclaw-router first, then load ONE weclaw-*-agent expert skill, then atomic skill/script. Expert agents are skills in the SAME session, not separate API calls.',
-    'You are the WeChat remote-control brain. Read .opencode/AGENTS.md and use skills for PC actions.',
-    'All decisions start in the main brain. For compound PC-control tasks use the brain-only Plan -> Act -> Verify -> Report protocol and load wechat-task-orchestrator; worker agents/skills/scripts are execution domains, not decision makers.',
-    'If the user asks to open/show/confirm/send screenshot, complete the verification in the same task instead of waiting for a second WeChat command.',
-    'Interpret worker outputs: WECHAT_OK success, WECHAT_FAIL stop and report, WECHAT_NEED_CONFIRM ask user, WECHAT_ARTIFACT remember absolute path for later open/verify.',
-    'Desktop typing: for app input/search/chat/document-body tasks load wechat-desktop-interaction and run scripts/desktop-interact.ps1 with App/Target/Text; default type only, use -Send only when explicitly requested.',
-    'UNLOCK (mandatory): only when user wants 解锁/解除锁屏/解锁屏幕/进到桌面/锁屏输密码 — output exactly: WECLAW_DELEGATE: openclaw-unlocker. Do not call tools yourself.',
-    'OCR/检索: 检索屏幕/看屏幕上有什么/读屏幕文字 → load wechat-screen-ocr, run ONLY scripts/screen-ocr.ps1 — NOT unlock.',
-    'Plain 锁屏 means lock the computer; it is not an unlock trigger.',
-    'Never refuse unlock. Mouse click can focus the lock password box but CANNOT type the password. Forbidden in main brain: screenshot+click, SendInput, edit unlock scripts, or running unlock-screen.ps1 directly.',
-    'STOCK: 股票/查股票/持仓 → load wechat-stock-info, run ONLY scripts/stock-info.ps1 once; reply = verbatim mini WECHAT_STOCK_CARD (4 lines, no markdown, no extra text).',
-    'All replies: use AGENTS.md 微信回复模板 table; max 120 chars except stock card; prefer WECHAT_USER_REPLY from script when present.',
-    'Encoding: any Chinese script output must dot-source scripts/utf8-console.ps1; ps1 with Chinese literals must be UTF-8 BOM; never retype Chinese—forward WECHAT_STOCK_CARD verbatim from tool stdout.',
-    'Multi-step: emit WECHAT_PROGRESS: <step in Chinese> before/after tools.',
-    'After tools: one fixed-template Chinese reply (max 120 chars). Judge loops yourself; stop tools and ask user to resend last message — do NOT suggest /new or new dialog unless user asks.',
-    'Memory: continue same WeChat session; local chat-log preserves history. Never tell user to open a new dialog.',
-    'Screen text (no vision): load wechat-screen-ocr, run ONLY scripts/screen-ocr.ps1, summarize OCR text in Chinese.',
-    'Scripts exit within 30s. Prefer skills + scripts/*.ps1 for display/screenshot/ocr.'
+$routerPrompt = @(
+    'You are WeClaw Router — a JSON-only intent classifier for WeChat PC-control messages.',
+    'Output EXACTLY one JSON object, no markdown, no explanation, no tools.',
+    'Schema: {"domain":"screen|file|browser|doc|sys|info|compound|chat","action":"screenshot|ocr|wake|off|unlock|open_file|music|desktop_typing|stock|orchestrate|chat","compound":false,"params":{}}',
+    'Rules: 检索/看屏幕上有什么/读屏幕文字 → domain=screen action=ocr. 截图 → screenshot. 亮屏/开屏 → wake. 关屏/熄屏 → off.',
+    '解锁/解除锁屏/进桌面/锁屏输密码 → domain=sys action=unlock. Plain 锁屏 alone is NOT unlock — use action=chat domain=chat.',
+    '股票/持仓/510300 → domain=info action=stock. 放歌/听歌 → domain=browser action=music. 打开文件 → domain=file action=open_file.',
+    '应用里输入/Word/WPS打字 → domain=doc action=desktop_typing. Multi-step or open+screenshot+verify → domain=compound action=orchestrate compound=true.',
+    'General chat/greeting/time/questions with no PC action → domain=chat action=chat.'
 ) -join ' '
+
+$specialistPrompt = @(
+    'You are WeClaw Specialist — execution brain AFTER the Router has classified intent.',
+    'WeClaw Router already chose domain/action; follow [ROUTER:...] prefix in the user message.',
+    'Load the indicated weclaw-*-agent skill, then run ONE fixed script or output WECLAW_DELEGATE for unlock.',
+    'Read .opencode/AGENTS.md for reply templates and script rules.',
+    'Compound tasks: load wechat-task-orchestrator, Plan->Act->Verify->Report in one WeChat turn.',
+    'OCR summary-only turns: user message says OCR already ran — summarize in ≤40 Chinese chars, no tools.',
+    'UNLOCK: only when [ROUTER:sys/unlock] or user clearly wants unlock — output exactly: WECLAW_DELEGATE: openclaw-unlocker. Never bash unlock-screen.ps1.',
+    'STOCK: run scripts/stock-info.ps1 once; reply = verbatim mini WECHAT_STOCK_CARD from stdout.',
+    'Prefer WECHAT_USER_REPLY from script stdout; never retype Chinese stock card text.',
+    'Emit WECHAT_PROGRESS: <step> for multi-step work. Final reply ≤120 chars except stock card.',
+    'Encoding: Chinese scripts use UTF-8 BOM + scripts/utf8-console.ps1.'
+) -join ' '
+
+# Legacy name kept for opencode agent block below
+$prompt = $specialistPrompt
 
 $utf8NoBom = New-Object System.Text.UTF8Encoding $false
 
@@ -52,8 +58,11 @@ $defaultProgress = @{
     start_delay_sec = 15
 }
 $defaultRouting = @{
-    simple_bypass   = $false
-    cancel_previous = $false
+    simple_bypass    = $false
+    cancel_previous  = $false
+    router_enabled   = $true
+    router_agent     = "router"
+    specialist_agent = "opencode"
 }
 $everosDisabled = $false
 $defaultMemory = @{
@@ -73,6 +82,49 @@ $defaultMemory = @{
 $defaultUnlocker = @{
     script_path = (Join-Path $workDir "scripts\unlock-screen.ps1")
     timeout_sec = 45
+}
+
+function Ensure-RouterAgents {
+    param(
+        [object]$Cfg,
+        [string]$OpenCodeCmd,
+        [string]$WorkDir,
+        [string]$Model
+    )
+    if (-not $Cfg.agents) {
+        $Cfg | Add-Member -NotePropertyName agents -NotePropertyValue (@{})
+    }
+    if (-not $Cfg.agents.router) {
+        $Cfg.agents | Add-Member -NotePropertyName router -NotePropertyValue ([pscustomobject]@{
+            type = "acp"; command = $OpenCodeCmd; args = @("acp"); cwd = $WorkDir; model = $Model
+            system_prompt = $routerPrompt
+        })
+        Write-Host "Added router agent (JSON-only classifier)" -ForegroundColor Yellow
+    } else {
+        $Cfg.agents.router | Add-Member -NotePropertyName system_prompt -NotePropertyValue $routerPrompt -Force
+        if (-not $Cfg.agents.router.command) {
+            $Cfg.agents.router | Add-Member -NotePropertyName command -NotePropertyValue $OpenCodeCmd -Force
+        }
+        if (-not $Cfg.agents.router.cwd) {
+            $Cfg.agents.router | Add-Member -NotePropertyName cwd -NotePropertyValue $WorkDir -Force
+        }
+        if (-not $Cfg.agents.router.model) {
+            $Cfg.agents.router | Add-Member -NotePropertyName model -NotePropertyValue $Model -Force
+        }
+    }
+    if (-not $Cfg.routing) {
+        $Cfg | Add-Member -NotePropertyName routing -NotePropertyValue ([pscustomobject]$defaultRouting)
+    } else {
+        if ($null -eq $Cfg.routing.router_enabled) {
+            $Cfg.routing | Add-Member -NotePropertyName router_enabled -NotePropertyValue $true -Force
+        }
+        if (-not $Cfg.routing.router_agent) {
+            $Cfg.routing | Add-Member -NotePropertyName router_agent -NotePropertyValue "router" -Force
+        }
+        if (-not $Cfg.routing.specialist_agent) {
+            $Cfg.routing | Add-Member -NotePropertyName specialist_agent -NotePropertyValue "opencode" -Force
+        }
+    }
 }
 
 function Ensure-LocalUnlocker {
@@ -116,6 +168,16 @@ if (Test-Path $configPath) {
             $cfg.routing | Add-Member -NotePropertyName cancel_previous -NotePropertyValue $false -Force
             Write-Host "Upgraded routing.cancel_previous → false (avoid interrupting multi-turn chat)" -ForegroundColor Yellow
         }
+        if ($null -eq $cfg.routing.router_enabled) {
+            $cfg.routing | Add-Member -NotePropertyName router_enabled -NotePropertyValue $true -Force
+            Write-Host "Added routing.router_enabled → true (Plan A two-stage router)" -ForegroundColor Yellow
+        }
+        if (-not $cfg.routing.router_agent) {
+            $cfg.routing | Add-Member -NotePropertyName router_agent -NotePropertyValue "router" -Force
+        }
+        if (-not $cfg.routing.specialist_agent) {
+            $cfg.routing | Add-Member -NotePropertyName specialist_agent -NotePropertyValue "opencode" -Force
+        }
     }
     if (-not $cfg.memory) {
         $cfg | Add-Member -NotePropertyName memory -NotePropertyValue ([pscustomobject]$defaultMemory)
@@ -152,8 +214,9 @@ if (Test-Path $configPath) {
         if (-not $cfg.agents.opencode.model) {
             $cfg.agents.opencode | Add-Member -NotePropertyName model -NotePropertyValue $model -Force
         }
-        $cfg.agents.opencode | Add-Member -NotePropertyName system_prompt -NotePropertyValue $prompt -Force
+        $cfg.agents.opencode | Add-Member -NotePropertyName system_prompt -NotePropertyValue $specialistPrompt -Force
     }
+    Ensure-RouterAgents -Cfg $cfg -OpenCodeCmd $opencodeCmd -WorkDir $workDir -Model $model
     Ensure-LocalUnlocker -Cfg $cfg
     $json = $cfg | ConvertTo-Json -Depth 6
     [System.IO.File]::WriteAllText($configPath, $json, $utf8NoBom)
@@ -166,13 +229,21 @@ if (Test-Path $configPath) {
         memory        = $defaultMemory
         unlocker      = $defaultUnlocker
         agents        = [ordered]@{
+            router = [ordered]@{
+                type          = "acp"
+                command       = $opencodeCmd
+                args          = @("acp")
+                cwd           = $workDir
+                model         = $model
+                system_prompt = $routerPrompt
+            }
             opencode = [ordered]@{
                 type          = "acp"
                 command       = $opencodeCmd
                 args          = @("acp")
                 cwd           = $workDir
                 model         = $model
-                system_prompt = $prompt
+                system_prompt = $specialistPrompt
             }
         }
     }
@@ -222,6 +293,9 @@ Write-Host "  cwd: $workDir"
 Write-Host "  progress: mode=$($defaultProgress.mode), enabled=$($defaultProgress.enabled), start_delay=$($defaultProgress.start_delay_sec)s"
 Write-Host "  routing.simple_bypass: $($defaultRouting.simple_bypass) (thin bridge)"
 Write-Host "  routing.cancel_previous: $($defaultRouting.cancel_previous)"
+Write-Host "  routing.router_enabled: $($defaultRouting.router_enabled) (Plan A: router → dispatch)"
+Write-Host "  routing.router_agent: $($defaultRouting.router_agent)"
+Write-Host "  routing.specialist_agent: $($defaultRouting.specialist_agent)"
 Write-Host "  memory.everos: enabled=$($defaultMemory.everos.enabled)"
 Write-Host "  memory.local: enabled=$($defaultMemory.local.enabled), max_turns=$($defaultMemory.local.max_turns)"
 Write-Host ""

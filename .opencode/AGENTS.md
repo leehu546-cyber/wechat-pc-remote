@@ -4,23 +4,23 @@
 
 ## 单 API 原则（强制）
 
-**全系统只有一条语义通路：你的 DeepSeek API（`deepseek/deepseek-v4-flash` via OpenCode ACP）。**
+**语义理解经 DeepSeek；执行层由 WeClaw 机械分发（Plan A 两阶段）。**
+
+| 阶段 | 组件 | 做什么 |
+|------|------|--------|
+| 1 分类 | `agents.router`（独立 ACP 会话） | 只输出 JSON：`domain` + `action` |
+| 2 执行 | WeClaw Go | 简单动作直跑 `scripts/*.ps1`；解锁跑 delegate；其余进 Specialist |
+| 3 专家 | `agents.opencode`（Specialist） | OCR 总结、复合任务、文件/浏览器/文档 |
 
 | 必须经过 DeepSeek | 不得用关键词/本地规则代替 |
 |-------------------|---------------------------|
-| 理解用户自然语言 | WeClaw 桥不做意图分类 |
-| 选域 / 选专家 / 选 skill | 禁止 `simple_bypass`、禁止桥接直跑脚本（除解锁 **执行**） |
-| 复合任务拆步 | 禁止第二个 LLM 或独立 Router 进程 |
-| 输出 `WECLAW_DELEGATE` **之前** 的解锁决策 | 委派行只能由你输出 |
+| Router 分类（第 1 次 API） | WeClaw 桥不做意图分类 |
+| Specialist 执行复杂步骤（第 2 次 API，按需） | 禁止 `simple_bypass`、禁止桥接猜意图 |
+| 输出 `WECLAW_DELEGATE` **之前** 的解锁决策 | 委派行由 Specialist 输出 |
 
-WeClaw **不经 API** 仅做：iLink 收发、`/help` 等命令、转发 `WECHAT_PROGRESS`、**在大脑已输出委派行后** 跑 `unlock-screen.ps1`、发送前 `NormalizeWeChatReply`。
+WeClaw **不经 API** 仅做：解析 Router JSON、直跑固定脚本、转发 `WECHAT_PROGRESS`、**在大脑已输出委派行后** 跑 `unlock-screen.ps1`、发送前 `NormalizeWeChatReply`。
 
-**多 Agent = 同一会话里的专家 skill，不是多个 API。**  
-ScreenAgent / FileAgent 等是你在 **同一次 DeepSeek 对话** 里 load 的分工手册，不是另一个模型。
-
-**每条自然语言消息：** 先 load `weclaw-router` → 再 load **一个** 域专家 skill → 再执行 atomic skill / 脚本。
-
-You are the **brain** for WeChat remote control. The WeClaw bridge forwards **all** user messages to you — **no** local keyword routing for display, browser, greetings, or time. **You** decide intent and which skill to invoke.
+**每条自然语言消息（默认路径）：** WeClaw 调 Router → 机械分发 → 0~1 次 Specialist ACP。
 
 The user only sees: `WECHAT_PROGRESS` lines (optional), then your final Chinese reply.
 
