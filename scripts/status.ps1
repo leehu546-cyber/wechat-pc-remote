@@ -37,17 +37,17 @@ if ($weclawProc) {
 }
 
 try {
-    $cxVer = codex --version 2>&1
-    Write-Host "[ok] Codex $cxVer" -ForegroundColor Green
+    $ocVer = opencode --version 2>&1
+    Write-Host "[ok] OpenCode $ocVer" -ForegroundColor Green
 } catch {
-    Write-Host "[--] Codex not installed" -ForegroundColor Red
+    Write-Host "[--] OpenCode not installed" -ForegroundColor Red
 }
 
-$deepseekKeyPath = Join-Path $env:USERPROFILE ".weclaw\deepseek.json"
-if ($env:DEEPSEEK_API_KEY -or (Test-Path $deepseekKeyPath)) {
-    Write-Host "[ok] DeepSeek API key configured" -ForegroundColor Green
+$ocAuth = Join-Path $env:USERPROFILE ".local\share\opencode\auth.json"
+if (Test-Path $ocAuth) {
+    Write-Host "[ok] OpenCode DeepSeek auth configured" -ForegroundColor Green
 } else {
-    Write-Host "[!!] DeepSeek API key missing — run scripts\setup-deepseek-key.ps1" -ForegroundColor Red
+    Write-Host "[!!] OpenCode auth missing — run: opencode auth login  or  scripts\setup-opencode-deepseek.ps1" -ForegroundColor Red
 }
 
 $weclawConfig = Join-Path $env:USERPROFILE ".weclaw\config.json"
@@ -55,10 +55,10 @@ if (Test-Path $weclawConfig) {
     try {
         $wc = Get-Content $weclawConfig -Raw -Encoding UTF8 | ConvertFrom-Json
         $agent = $wc.default_agent
-        $router = $wc.routing.router_agent
-        $specialist = $wc.routing.specialist_agent
-        $cwd = $wc.agents.codex.cwd
-        Write-Host "[ok] default=$agent | router=$router | specialist=$specialist | cwd=$cwd" -ForegroundColor Green
+        $model = $wc.agents.opencode.model
+        $cwd = $wc.agents.opencode.cwd
+        $routerOn = $wc.routing.router_enabled
+        Write-Host "[ok] default=$agent | model=$model | router_enabled=$routerOn | cwd=$cwd" -ForegroundColor Green
     } catch {
         Write-Host "[..] weclaw config present but unreadable" -ForegroundColor Yellow
     }
@@ -85,7 +85,6 @@ if (Test-Path $weclawLog) {
     Write-Host "[ok] weclaw log: $weclawLog ($logSize bytes)" -ForegroundColor Green
 }
 
-# Legacy wechat-local-chat (optional)
 $legacyPid = Join-Path $env:USERPROFILE ".wechat-local-chat\bridge.pid"
 if (Test-Path $legacyPid) {
     $bpid = Get-Content $legacyPid -ErrorAction SilentlyContinue
