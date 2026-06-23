@@ -42,3 +42,6 @@ litter/
 
 # 临时克隆/测试目录
 narwal_r/
+
+# Python venvs
+.venv-windows-use/

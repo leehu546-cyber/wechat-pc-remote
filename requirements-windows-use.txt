@@ -1,0 +1,4 @@
+# Windows-Use desktop agent (installed into .venv-windows-use)
+windows-use==0.8.1
+# windows-use 0.8.1 imports mistralai.Mistral; mistralai 2.x breaks import
+mistralai==1.9.11
