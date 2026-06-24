@@ -16,10 +16,9 @@ description: Use when the user says 截图 or 截屏 to take a screenshot and se
    powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/screenshot.ps1
    ```
 3. **禁止**：read、list、自写截屏命令、多轮试探。
-4. 收尾回复（固定一句）：`截图已发到微信。`
-   - 若 stdout 含 `WECHAT_USER_REPLY:`，原样转发该行内容。
+4. 脚本成功（stdout 含 `WECHAT_MEDIA_SENT`）时 **不要** 再发文字——图片已由脚本发到微信。
+5. 失败时回复：`没做成：截图发送失败。`
 
 ## 注意事项
 - 脚本会自动唤醒显示器 → 截屏 → 经 weclaw 发图 → 清理（最长 90 秒）。
-- 失败时回复：`没做成：截图发送失败。`
 - 关屏/开屏见 `wechat-screen-off` / `wechat-screen-on`，不要混用即兴 bash。
