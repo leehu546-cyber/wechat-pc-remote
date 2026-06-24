@@ -1,0 +1,43 @@
+---
+description: 每次改代码/脚本/配置后必须 git 提交并更新 docs/操作日志.md
+alwaysApply: true
+---
+
+# Git 提交 + 操作日志（强制）
+
+在本仓库（含 `weclaw/` 子仓库）**任意修改代码、脚本或配置**后，结束任务前**必须**完成：
+
+1. **追加** `docs/操作日志.md`（或运行 `scripts/log-step.ps1`）
+2. **Git commit** 相关文件（主仓与子仓分别提交）
+
+## 禁止
+
+- 改完只口头总结、不提交、不写日志
+- 提交 `.env`、API Key、`weclaw.exe`、`node_modules/`
+- 未经用户要求 `git push`
+
+## 日志格式
+
+在「待办」章节**之前**追加：
+
+```markdown
+### NN | 类别 | 标题
+
+**日期：** YYYY-MM-DD
+
+**操作：** 改了什么、为什么
+
+**结果：** 如何验证
+```
+
+类别：修复 / 功能 / 优化 / 整理 / 配置 / 验证
+
+## 子仓库 weclaw
+
+若改动 `weclaw/`，在 `weclaw/` 内单独 `go test`、`go build`、`git commit`；主仓日志注明子仓 commit。
+
+## 例外
+
+仅当用户**明确**说「不要提交」「先别 commit」时可跳过。
+
+详细步骤见 `.cursor/skills/git-commit-and-oplog/SKILL.md`。

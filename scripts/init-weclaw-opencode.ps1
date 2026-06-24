@@ -54,11 +54,9 @@ $defaultProgress = @{
     start_delay_sec = 15
 }
 $defaultRouting = @{
-    simple_bypass    = $false
-    cancel_previous  = $false
-    router_enabled   = $false
-    router_agent     = "deepseek-router"
-    specialist_agent = "opencode"
+    simple_bypass   = $false
+    cancel_previous = $true
+    router_enabled  = $false
 }
 $defaultMemory = @{
     everos = @{
@@ -106,9 +104,26 @@ function Ensure-OpenCodeBrain {
         $Cfg | Add-Member -NotePropertyName routing -NotePropertyValue ([pscustomobject]$defaultRouting)
     } else {
         $Cfg.routing | Add-Member -NotePropertyName router_enabled -NotePropertyValue $false -Force
-        $Cfg.routing | Add-Member -NotePropertyName specialist_agent -NotePropertyValue "opencode" -Force
         $Cfg.routing | Add-Member -NotePropertyName simple_bypass -NotePropertyValue $false -Force
-        $Cfg.routing | Add-Member -NotePropertyName cancel_previous -NotePropertyValue $false -Force
+        $Cfg.routing | Add-Member -NotePropertyName cancel_previous -NotePropertyValue $true -Force
+    }
+}
+
+function Remove-LegacyRouterAgents {
+    param([object]$Cfg)
+    if (-not $Cfg.agents) { return }
+    foreach ($name in @('router', 'deepseek-router', 'codex')) {
+        if ($Cfg.agents.PSObject.Properties.Name -contains $name) {
+            $Cfg.agents.PSObject.Properties.Remove($name)
+            Write-Host "Removed legacy agent: $name" -ForegroundColor Yellow
+        }
+    }
+    if ($Cfg.routing) {
+        foreach ($prop in @('router_agent', 'specialist_agent')) {
+            if ($Cfg.routing.PSObject.Properties.Name -contains $prop) {
+                $Cfg.routing.PSObject.Properties.Remove($prop)
+            }
+        }
     }
 }
 
@@ -155,6 +170,7 @@ if ($cfg.memory.everos -and $cfg.memory.everos.enabled -eq $true) {
 
 Ensure-OpenCodeBrain -Cfg $cfg -OpenCodeCmd $opencodeCmd -WorkDir $workDir -Model $model
 Ensure-LocalUnlocker -Cfg $cfg
+Remove-LegacyRouterAgents -Cfg $cfg
 
 $json = $cfg | ConvertTo-Json -Depth 6
 [System.IO.File]::WriteAllText($configPath, $json, $utf8NoBom)
@@ -163,7 +179,8 @@ Write-Host "Wrote $configPath" -ForegroundColor Green
 Write-Host "  default_agent: opencode"
 Write-Host "  model: $model (paid DeepSeek via OpenCode auth)"
 Write-Host "  cwd: $workDir"
-Write-Host "  routing.router_enabled: false (all NL -> OpenCode ACP)"
+Write-Host "  routing.cancel_previous: true (new message cancels in-flight task)"
+Write-Host "  routing.router_enabled: false (all NL -> OpenCode ACP only)"
 Write-Host ""
 Write-Host "Next: scripts\restart-weclaw.ps1" -ForegroundColor Cyan
 

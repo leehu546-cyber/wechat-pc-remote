@@ -242,8 +242,9 @@ When the user says「刚才」「上一步」, check this table and recent tool 
 
 ## Commit & Log rules
 
-- After code changes: git commit + `scripts/log-step.ps1`
-- Log categories: 修复 / 功能 / 优化 / 整理
+- **强制（根规则）：** 每次改代码/脚本/配置 → 追加 `docs/操作日志.md` + git commit（主仓与 `weclaw/` 分别提交）。见 `.cursor/rules/git-commit-and-oplog.mdc`
+- 可用 `scripts/log-step.ps1` 写日志
+- 日志类别：修复 / 功能 / 优化 / 整理 / 配置 / 验证
 
 ## Screen off (canonical script only)
 
