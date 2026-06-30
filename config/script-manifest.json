@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "routing": {
+    "mechanical": "planner -> scripts/*.ps1 (Go executes, no LLM summary)",
+    "daily_chat": "planner action=chat -> OpenCode Specialist",
+    "complex": "planner orchestrate (<=3 steps) -> scripts/gui; else OpenCode Specialist",
+    "new_capability": "implement scripts/<name>.ps1 + register in data/registry.sqlite"
+  },
+  "scripts": [
+    { "name": "screenshot", "path": "scripts/screenshot.ps1", "triggers": ["截图", "截屏"], "category": "mechanical" },
+    { "name": "screen-ocr", "path": "scripts/screen-ocr.ps1", "triggers": ["ocr", "识别屏幕", "看屏幕"], "category": "mechanical" },
+    { "name": "wake-screen", "path": "scripts/wake-screen.ps1", "triggers": ["亮屏", "唤醒"], "category": "mechanical" },
+    { "name": "turn-off-screen", "path": "scripts/turn-off-screen.ps1", "triggers": ["关屏", "关闭屏幕"], "category": "mechanical" },
+    { "name": "unlock-screen", "path": "scripts/unlock-screen.ps1", "triggers": ["解锁"], "category": "mechanical" },
+    { "name": "focus-rustdesk", "path": "scripts/focus-rustdesk.ps1", "triggers": ["rustdesk", "远程桌面"], "category": "mechanical" },
+    { "name": "copy-to-desktop", "path": "scripts/copy-to-desktop.ps1", "triggers": ["放到桌面", "放桌面"], "category": "mechanical" },
+    { "name": "desktop-interact", "path": "scripts/desktop-interact.ps1", "triggers": ["输入", "打字"], "category": "utility" },
+    { "name": "windows-use-task", "path": "scripts/windows-use-task.ps1", "triggers": ["打开", "gui"], "category": "gui" },
+    { "name": "open-file-fast", "path": "scripts/open-file-fast.ps1", "triggers": ["打开文件"], "category": "mechanical" }
+  ]
+}

@@ -70,7 +70,7 @@ $plannerPrompt = @(
     'Do NOT add unlock/wake unless user explicitly asks 解锁/解除锁屏/进桌面. Never unlock for 打开某应用.',
     '打开未知App(非rustdesk)-> single gui step with full user goal. Max 3 steps unless user lists many actions.',
     '解锁/进桌面->unlock only when user asks. Plain 锁屏 without 解->chat/chat. Pure chat->chat/chat.',
-    'Complex coding/desktop/doc tasks -> cursor_worker (WeClaw runs scripts/cursor-delegate-task.ps1). Do NOT use gui/opencode for those.'
+    'Complex/multi-step desktop -> orchestrate with gui/open_file/screenshot steps (max 3). Coding/doc -> chat/chat so OpenCode handles; if repeat task, user may ask to add a fixed script.'
 ) -join ' '
 
 function Get-DeepSeekApiKey {

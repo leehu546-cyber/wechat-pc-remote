@@ -14,6 +14,7 @@ weclaw/weclaw.exe
 # 本地运行时数据（含微信 token，勿提交）
 .wx-ai-bridge/
 .wechat-local-chat/
+data/*.sqlite
 
 # 系统与编辑器
 .DS_Store
