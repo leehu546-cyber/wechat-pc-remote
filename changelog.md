@@ -1,3 +1,14 @@
+---
+AIGC:
+    Label: "1"
+    ContentProducer: 001191440300708461136T1XGW3
+    ProduceID: 0e492044c027686e90bc806c9ac848c8_90a7a9216e9e11f18805525400d9a7a1
+    ReservedCode1: /jYBemVzJXUTqjDDmWIuDycVrOByeQrnPnofo5ixOeeiBZRZ+Iro2GhVgNVViVIvjOqndPb/xYpSVWF7E6EnNrGBy31uRG906w4FuIINFJR6PnnIEC/TbyHhVM4hhMIoyI88QuFOSV4RX966EdM1nR2VK1ejINS5WXovIYHYMvVWUPgYdTEZipLuP+o=
+    ContentPropagator: 001191440300708461136T1XGW3
+    PropagateID: 0e492044c027686e90bc806c9ac848c8_90a7a9216e9e11f18805525400d9a7a1
+    ReservedCode2: /jYBemVzJXUTqjDDmWIuDycVrOByeQrnPnofo5ixOeeiBZRZ+Iro2GhVgNVViVIvjOqndPb/xYpSVWF7E6EnNrGBy31uRG906w4FuIINFJR6PnnIEC/TbyHhVM4hhMIoyI88QuFOSV4RX966EdM1nR2VK1ejINS5WXovIYHYMvVWUPgYdTEZipLuP+o=
+---
+
 # WeClaw Bug 修复操作日志
 
 > 项目：`D:\cursor\61` (微信 Claw Bot)
@@ -160,3 +171,4 @@ ok  github.com/fastclaw-ai/weclaw/agent  0.881s  (18/18 PASS)
 1. **git 提交**：由主 Agent 执行 `git add` + `git commit`
 2. **WeClaw 重启**：修改生效需重启 WeClaw 进程
 3. **建议配合 config.json 调整**：确保 `routing.cancel_previous = true`（当前为 false，与日志中实际 cancel 行为不一致）
+*（内容由AI生成，仅供参考）*

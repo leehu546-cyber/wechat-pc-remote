@@ -5,11 +5,12 @@ param(
     [Parameter(Mandatory = $true)]
     [string]$Target,
 
-    [Parameter(Mandatory = $true)]
-    [string]$Text,
+    [Parameter(Mandatory = $false)]
+    [string]$Text = "",
 
     [switch]$Send = $false,
     [switch]$Verify = $false,
+    [switch]$ClickOnly = $false,
     [string]$ConfigPath
 )
 
@@ -203,25 +204,38 @@ if ($rect.Left -lt -10000 -or $rect.Top -lt -10000 -or $width -lt 200 -or $heigh
 
 $xRatio = [double]$targetProfile.x_ratio
 $yRatio = [double]$targetProfile.y_ratio
+$clickCount = 1
+if ($null -ne $targetProfile.click_count) {
+    $clickCount = [int]$targetProfile.click_count
+    if ($clickCount -lt 1) { $clickCount = 1 }
+}
 $x = $rect.Left + [int]($width * $xRatio)
 $y = $rect.Top + [int]($height * $yRatio)
 
 [DesktopInteractWin32]::SetCursorPos($x, $y) | Out-Null
 Start-Sleep -Milliseconds 100
-[DesktopInteractWin32]::mouse_event(0x02, 0, 0, 0, [UIntPtr]::Zero)
-Start-Sleep -Milliseconds 50
-[DesktopInteractWin32]::mouse_event(0x04, 0, 0, 0, [UIntPtr]::Zero)
+for ($i = 0; $i -lt $clickCount; $i++) {
+    [DesktopInteractWin32]::mouse_event(0x02, 0, 0, 0, [UIntPtr]::Zero)
+    Start-Sleep -Milliseconds 50
+    [DesktopInteractWin32]::mouse_event(0x04, 0, 0, 0, [UIntPtr]::Zero)
+    if ($i -lt ($clickCount - 1)) { Start-Sleep -Milliseconds 120 }
+}
 Start-Sleep -Milliseconds 250
 
-Set-Clipboard -Value $Text
-[System.Windows.Forms.SendKeys]::SendWait("^v")
-Start-Sleep -Milliseconds 500
-
-if ($Send) {
-    $sendKey = [string]$targetProfile.send_key
-    if (-not $sendKey) { $sendKey = "{ENTER}" }
-    [System.Windows.Forms.SendKeys]::SendWait($sendKey)
+if (-not $ClickOnly) {
+    if ([string]::IsNullOrWhiteSpace($Text)) {
+        Write-Fail "text_required"
+    }
+    Set-Clipboard -Value $Text
+    [System.Windows.Forms.SendKeys]::SendWait("^v")
     Start-Sleep -Milliseconds 500
+
+    if ($Send) {
+        $sendKey = [string]$targetProfile.send_key
+        if (-not $sendKey) { $sendKey = "{ENTER}" }
+        [System.Windows.Forms.SendKeys]::SendWait($sendKey)
+        Start-Sleep -Milliseconds 500
+    }
 }
 
 Write-Host "WECHAT_OK: typed text into $($profileEntry.Name)/$($targetEntry.Name)"
@@ -232,3 +246,5 @@ if ($Verify) {
     Write-Host "WECHAT_ARTIFACT: $shot"
     Write-Host "WECHAT_OK: verification screenshot saved"
 }
+
+exit 0

@@ -18,9 +18,23 @@
       "start_args": "D:\\cursor\\61",
       "targets": {
         "chat_input": {
-          "x_ratio": 0.47,
-          "y_ratio": 0.94,
-          "send_key": "{ENTER}"
+          "x_ratio": 0.62,
+          "y_ratio": 0.938,
+          "click_count": 2,
+          "send_key": "{ENTER}",
+          "note": "Bottom Composer — right chat pane on Send follow-up, above status bar"
+        },
+        "wechat_agent_folder": {
+          "x_ratio": 0.12,
+          "y_ratio": 0.47,
+          "click_count": 1,
+          "note": "Sidebar Repositories > 工作"
+        },
+        "wechat_agent_chat": {
+          "x_ratio": 0.14,
+          "y_ratio": 0.52,
+          "click_count": 1,
+          "note": "Sidebar > 工作 > WeChat account transfer"
         }
       }
     },

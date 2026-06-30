@@ -1,0 +1,36 @@
+---
+description: WeChat agent layered architecture — Planner executes via scripts, never hallucinate
+alwaysApply: true
+---
+
+# WeChat Remote Control Architecture
+
+Project goal: WeChat controls this Windows PC reliably.
+
+## Layer boundaries (do not mix)
+
+1. **Channel** — `weclaw/messaging/bridge.go`: WeChat I/O only
+2. **Scheduler** — `handler.go`: tasks, cancel, commands
+3. **Planner** — HTTP DeepSeek JSON in `router.go`: classify only, no tools
+4. **Executor** — `router_dispatch.go` + `scripts/*.ps1`: mechanical actions
+5. **Specialist fallback** — OpenCode ACP + `.opencode/skills/`: complex tasks only
+6. **Reply** — `reply_normalize.go`: script output is truth
+7. **Inbound files** — `inbound.go`: WeChat attachments → `~/.weclaw/inbound/{user}/`
+8. **Cursor worker** — `cursor-delegate-task.ps1`: complex tasks → Cursor chat → OCR monitor → WeChat reply; upgrade → `cursor-account-switch.ps1`
+
+## Hard rules
+
+- Actions in `plannerScriptByAction` (screenshot, ocr, wake, off, stock, rustdesk, copy_to_desktop, **not** cursor_worker for mechanical list) **must not** go to OpenCode Specialist.
+- **Default for non-mechanical, non-daily-chat:** `cursor_worker` bypasses Planner; paste **full user message** into Cursor dialog.
+- **Only** single-step fixed scripts (纯「截图」「解锁」「关屏」等，无「然后/打开文件夹」) stay on ps1.
+- After a mechanical script succeeds, **never** call LLM to rewrite the user reply (no fake「已完成：…」).
+- Single-step mechanical plans return script text verbatim.
+- WeChat file attachments must be saved via `SaveInboundFile` before「放到桌面」/「打开它」.
+- Chinese ps1 scripts: UTF-8 BOM + `utf8-console.ps1`; stdout uses `WECHAT_USER_REPLY` / `WECHAT_OK` / `WECHAT_FAIL` / `WECHAT_MEDIA_SENT`.
+- Before changing routing/replies/scripts, read `docs/架构说明.md` and append `docs/操作日志.md`.
+
+## Debug order
+
+1. `~/.weclaw/chat-log/*.jsonl`
+2. `~/.weclaw/weclaw.log` — `planner decision`, `planner running script`, `normalized reply`
+3. Run the ps1 alone if script layer suspected

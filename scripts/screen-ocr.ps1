@@ -1,7 +1,8 @@
 # screen-ocr.ps1 - wake display, capture screen, Windows built-in OCR, print text for Agent
 param(
     [switch]$SkipWake = $false,
-    [int]$MaxChars = 3500
+    [int]$MaxChars = 3500,
+    [double]$CropLeftRatio = 0.0
 )
 
 $ErrorActionPreference = "Stop"
@@ -95,6 +96,19 @@ try {
     $g = [System.Drawing.Graphics]::FromImage($bitmap)
     $g.CopyFromScreen($bounds.X, $bounds.Y, 0, 0, $bounds.Size)
     $g.Dispose()
+
+    if ($CropLeftRatio -gt 0.0 -and $CropLeftRatio -lt 0.95) {
+        $cropX = [int]($bitmap.Width * $CropLeftRatio)
+        $cropW = $bitmap.Width - $cropX
+        if ($cropW -gt 40) {
+            $cropped = New-Object System.Drawing.Bitmap $cropW, $bitmap.Height
+            $cg = [System.Drawing.Graphics]::FromImage($cropped)
+            $cg.DrawImage($bitmap, 0, 0, (New-Object System.Drawing.Rectangle $cropX, 0, $cropW, $bitmap.Height), [System.Drawing.GraphicsUnit]::Pixel)
+            $cg.Dispose()
+            $bitmap.Dispose()
+            $bitmap = $cropped
+        }
+    }
 
     if (Test-BitmapMostlyBlack $bitmap) {
         $bitmap.Dispose()

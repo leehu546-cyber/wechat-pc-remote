@@ -1,0 +1,9 @@
+{
+  "folder": "工作",
+  "chat_title": "WeChat account transfer",
+  "folder_target": "wechat_agent_folder",
+  "chat_target": "wechat_agent_chat",
+  "account_switch_bat": "D:\\AI助手.bat",
+  "post_switch_wait_sec": 120,
+  "note": "Quota/limit -> run AI助手.bat, wait 2min, then resubmit to Cursor chat"
+}
