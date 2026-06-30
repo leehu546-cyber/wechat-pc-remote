@@ -34,14 +34,15 @@ $configPath = Join-Path $weclawDir "config.json"
 New-Item -ItemType Directory -Path $weclawDir -Force | Out-Null
 
 $brainPrompt = @(
-    'You are the WeChat remote-control brain via OpenCode ACP. Model billing uses the user paid DeepSeek API (deepseek/deepseek-v4-flash), NOT opencode/*-free.',
-    'Read .opencode/AGENTS.md and skills. Every NL message: load weclaw-router, then ONE weclaw-*-agent expert, then atomic skill or fixed script.',
-    'Compound tasks: load wechat-task-orchestrator; Plan->Act->Verify->Report in one WeChat turn.',
-    'UNLOCK: only for 解锁/解除锁屏/进桌面/锁屏输密码 — output exactly: WECLAW_DELEGATE: openclaw-unlocker. Never bash unlock-screen.ps1.',
-    'OCR/检索: wechat-screen-ocr + scripts/screen-ocr.ps1 only — NOT unlock. Plain 锁屏 is NOT unlock.',
-    'STOCK: scripts/stock-info.ps1 once; reply = verbatim mini WECHAT_STOCK_CARD from stdout.',
-    'Prefer WECHAT_USER_REPLY from script stdout; never retype Chinese stock card. Final reply <=120 chars except stock card.',
-    'Emit WECHAT_PROGRESS: <step> for multi-step work. Encoding: Chinese ps1 = UTF-8 BOM + scripts/utf8-console.ps1.'
+    'You are the WeChat remote-control specialist via OpenCode ACP. DeepSeek API billing via paid key.',
+    'WeClaw planner may handle atomic tasks (screenshot/OCR/off/wake/stock/unlock/gui steps) before you.',
+    'When you receive [PLANNER:...] prefix: load the indicated weclaw-*-agent skill; at most ONE bash per turn.',
+    'Compound fallback: load wechat-task-orchestrator; Plan->Act->Verify->Report; max 3 tool calls then reply.',
+    'UNLOCK: output exactly WECLAW_DELEGATE: openclaw-unlocker — never bash unlock-screen.ps1.',
+    'OCR/检索: wechat-screen-ocr + screen-ocr.ps1 — NOT unlock. Unknown apps: prefer gui is handled by planner; you use fixed scripts only.',
+    'STOCK: stock-info.ps1 once; reply = verbatim WECHAT_STOCK_CARD.',
+    'Never leak English tool titles or skill names to user. Final reply <=120 chars except stock card.',
+    'WECHAT_PROGRESS for multi-step. Chinese ps1 = UTF-8 BOM + utf8-console.ps1.'
 ) -join ' '
 
 $utf8NoBom = New-Object System.Text.UTF8Encoding $false
@@ -54,9 +55,68 @@ $defaultProgress = @{
     start_delay_sec = 15
 }
 $defaultRouting = @{
-    simple_bypass   = $false
-    cancel_previous = $true
-    router_enabled  = $false
+    simple_bypass    = $false
+    cancel_previous  = $true
+    router_enabled   = $true
+    router_agent     = "planner"
+    specialist_agent = "opencode"
+}
+
+$plannerPrompt = @(
+    'You are a WeChat PC task planner. Reply with JSON only (optionally fenced in ```json).',
+    'Schema: {"domain":"screen|file|browser|doc|sys|info|compound|chat","action":"screenshot|ocr|wake|off|unlock|open_file|music|desktop_typing|stock|gui|orchestrate|chat","compound":bool,"params":{},"steps":[{"action":"unlock|wake|off|screenshot|ocr|stock|gui|open_file|music|desktop_typing","goal":"..."}]}',
+    'Rules: 检索/看屏幕文字/下载进度/网盘 -> ocr or steps with gui+ocr, NOT screenshot alone for reading.',
+    '截图->screenshot. 复合(然后/再/并)->compound with steps max 5: unlock if needed, gui for unknown apps (RustDesk/百度网盘), ocr to read UI, screenshot to confirm.',
+    '解锁/进桌面->unlock. Plain 锁屏 without 解->chat/chat. Pure chat->chat/chat.'
+) -join ' '
+
+function Get-DeepSeekApiKey {
+    $keyPath = Join-Path $weclawDir "deepseek.json"
+    if (Test-Path $keyPath) {
+        $k = (Get-Content $keyPath -Raw -Encoding UTF8 | ConvertFrom-Json).api_key
+        if ($k) { return $k.Trim() }
+    }
+    if (Test-Path $authPath) {
+        $auth = Get-Content $authPath -Raw -Encoding UTF8 | ConvertFrom-Json
+        $k = ($auth.deepseek).key
+        if ($k) { return $k.Trim() }
+    }
+    return $null
+}
+
+function Ensure-PlannerAgent {
+    param(
+        [object]$Cfg,
+        [string]$ApiKey
+    )
+    if (-not $ApiKey) {
+        Write-Host "WARNING: No DeepSeek API key for planner; router will fall back to OpenCode only" -ForegroundColor Yellow
+        if ($Cfg.routing) {
+            $Cfg.routing | Add-Member -NotePropertyName router_enabled -NotePropertyValue $false -Force
+        }
+        return
+    }
+    if (-not $Cfg.agents) {
+        $Cfg | Add-Member -NotePropertyName agents -NotePropertyValue (@{})
+    }
+    $plannerCfg = [ordered]@{
+        type          = "http"
+        endpoint      = "https://api.deepseek.com/chat/completions"
+        api_key       = $ApiKey
+        model         = "deepseek-chat"
+        system_prompt = $plannerPrompt
+        max_history   = 0
+    }
+    $Cfg.agents | Add-Member -NotePropertyName planner -NotePropertyValue ([pscustomobject]$plannerCfg) -Force
+    Write-Host "Configured agents.planner (HTTP deepseek-chat, JSON only)" -ForegroundColor Green
+
+    if (-not $Cfg.routing) {
+        $Cfg | Add-Member -NotePropertyName routing -NotePropertyValue ([pscustomobject]$defaultRouting)
+    } else {
+        $Cfg.routing | Add-Member -NotePropertyName router_enabled -NotePropertyValue $true -Force
+        $Cfg.routing | Add-Member -NotePropertyName router_agent -NotePropertyValue "planner" -Force
+        $Cfg.routing | Add-Member -NotePropertyName specialist_agent -NotePropertyValue "opencode" -Force
+    }
 }
 $defaultMemory = @{
     everos = @{
@@ -103,9 +163,17 @@ function Ensure-OpenCodeBrain {
     if (-not $Cfg.routing) {
         $Cfg | Add-Member -NotePropertyName routing -NotePropertyValue ([pscustomobject]$defaultRouting)
     } else {
-        $Cfg.routing | Add-Member -NotePropertyName router_enabled -NotePropertyValue $false -Force
+        if ($null -eq $Cfg.routing.router_enabled) {
+            $Cfg.routing | Add-Member -NotePropertyName router_enabled -NotePropertyValue $true -Force
+        }
         $Cfg.routing | Add-Member -NotePropertyName simple_bypass -NotePropertyValue $false -Force
         $Cfg.routing | Add-Member -NotePropertyName cancel_previous -NotePropertyValue $true -Force
+        if (-not $Cfg.routing.router_agent) {
+            $Cfg.routing | Add-Member -NotePropertyName router_agent -NotePropertyValue "planner" -Force
+        }
+        if (-not $Cfg.routing.specialist_agent) {
+            $Cfg.routing | Add-Member -NotePropertyName specialist_agent -NotePropertyValue "opencode" -Force
+        }
     }
 }
 
@@ -116,13 +184,6 @@ function Remove-LegacyRouterAgents {
         if ($Cfg.agents.PSObject.Properties.Name -contains $name) {
             $Cfg.agents.PSObject.Properties.Remove($name)
             Write-Host "Removed legacy agent: $name" -ForegroundColor Yellow
-        }
-    }
-    if ($Cfg.routing) {
-        foreach ($prop in @('router_agent', 'specialist_agent')) {
-            if ($Cfg.routing.PSObject.Properties.Name -contains $prop) {
-                $Cfg.routing.PSObject.Properties.Remove($prop)
-            }
         }
     }
 }
@@ -169,6 +230,7 @@ if ($cfg.memory.everos -and $cfg.memory.everos.enabled -eq $true) {
 }
 
 Ensure-OpenCodeBrain -Cfg $cfg -OpenCodeCmd $opencodeCmd -WorkDir $workDir -Model $model
+Ensure-PlannerAgent -Cfg $cfg -ApiKey (Get-DeepSeekApiKey)
 Ensure-LocalUnlocker -Cfg $cfg
 Remove-LegacyRouterAgents -Cfg $cfg
 
@@ -180,7 +242,9 @@ Write-Host "  default_agent: opencode"
 Write-Host "  model: $model (paid DeepSeek via OpenCode auth)"
 Write-Host "  cwd: $workDir"
 Write-Host "  routing.cancel_previous: true (new message cancels in-flight task)"
-Write-Host "  routing.router_enabled: false (all NL -> OpenCode ACP only)"
+Write-Host "  routing.router_enabled: $($cfg.routing.router_enabled) (planner JSON -> scripts/steps -> OpenCode fallback)"
+Write-Host "  routing.router_agent: $($cfg.routing.router_agent)"
+Write-Host "  routing.specialist_agent: $($cfg.routing.specialist_agent)"
 Write-Host ""
 Write-Host "Next: scripts\restart-weclaw.ps1" -ForegroundColor Cyan
 

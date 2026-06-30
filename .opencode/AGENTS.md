@@ -4,18 +4,19 @@
 
 ## 单 API 原则（强制）
 
-**全系统语义经 OpenCode ACP + 你的 DeepSeek 付费 API（`deepseek/deepseek-v4-flash`）。**
+**语义理解经 DeepSeek；执行分两层：Planner（JSON，无工具）+ Specialist（OpenCode ACP，按步工人）。**
 
 | 组件 | 做什么 |
 |------|--------|
-| **OpenCode ACP** | 理解中文、load skill、调 bash、写回复 / 委派行 |
-| **DeepSeek API** | 模型算力（你充值；经 OpenCode auth，不走 `opencode/*-free`） |
-| **WeClaw Go** | 收发微信、记忆、解锁执行、回复规范化（不做意图分类） |
+| **Planner (HTTP deepseek-chat)** | 理解中文 → 输出 JSON 计划（原子脚本 / 分步 / GUI / 转 Specialist） |
+| **WeClaw Go 分步执行器** | 机械跑 `scripts/*.ps1`、解锁委派、Windows-Use GUI 步；复合任务逐步执行 |
+| **OpenCode ACP (Specialist)** | Planner 无法机械完成的步：编码、放歌、桌面输入；**每步最多 1 次 bash** |
+| **DeepSeek API** | Planner + Specialist 模型算力 |
 | **scripts/*.ps1** | 机械执行单一 PC 动作 |
 
-WeClaw **不经 API** 仅做：iLink、`/help` 等命令、进度转发、**在大脑已输出委派行后** 跑 `unlock-screen.ps1`、发送前 `NormalizeWeChatReply`。
+WeClaw **不经 LLM** 仅做：iLink、命令、进度转发、解锁执行、**Planner 解析后的脚本/GUI 分步**、回复规范化。
 
-**每条自然语言消息：** OpenCode 读 AGENTS + skills → 固定脚本或 `WECLAW_DELEGATE`。
+**每条自然语言消息：** Planner JSON → 能脚本的直接跑 → 复合按 steps 逐步 → 失败或未覆盖则 fallback OpenCode Specialist。
 
 The user only sees: `WECHAT_PROGRESS` lines (optional), then your final Chinese reply.
 
@@ -35,6 +36,7 @@ WeChat 只显示纯文本。结论先行，大白话，禁止 Markdown（无 `##
 | 放歌 | `已在浏览器打开：{歌名}` |
 | 打开文件 | `已打开：{文件名}` |
 | 复合任务成功 | `已完成：{做了什么}` |
+| GUI / 未知 App | `已完成：{结果}` 或 OCR `屏幕上主要是：…` |
 | 任意失败 | `没做成：{一句原因}` |
 | 需要确认 | `需要你确认：{缺什么}` |
 
@@ -60,11 +62,12 @@ This PC is the user's Windows workstation. Assume the user wants practical local
 
 ## Installed local skills
 
-### 大脑入口（自然语言必先 load）
+### 大脑入口
 
 | Skill | 作用 |
 |-------|------|
-| `weclaw-router` | **总路由**（单 API 内分类 → 选域，不替代 atomic skill） |
+| `weclaw-router` | **文档参考**（真 Planner 在 WeClaw `agents.planner` HTTP，不 load 此 skill） |
+| `wechat-task-orchestrator` | Specialist **fallback** 复合协议（Planner 已分步时少用） |
 
 ### 域专家（router 之后 load 一个）
 
@@ -99,7 +102,8 @@ This PC is the user's Windows workstation. Assume the user wants practical local
 - For display, screenshot, OCR, unlock, music, and file-open tasks: do not list directories, read many files, or invent new PowerShell. Use the fixed script/protocol above.
 - For generated files: put ordinary project docs in `D:\cursor\61`; if the user wants to see them, open via `scripts/open-file-fast.ps1`.
 - For "刚才/这个/上一步": prefer the most recent generated/opened file or the task context; if unsure, open the latest matching file from desktop/workspace using the fixed opener.
-- For compound PC-control tasks, load `wechat-task-orchestrator` first and run the task as Plan -> Act -> Verify -> Report. Word/WPS, browser, file, music, screen, and app-control tasks all use the same collaboration pattern.
+- For compound PC-control tasks: WeClaw Planner usually emits `steps[]` and runs them mechanically. If you receive `[PLANNER:compound]`, load `wechat-task-orchestrator` and complete with **at most 3 bash calls** then reply.
+- For unknown desktop apps (网盘/RustDesk/托盘程序): Planner uses `gui` step → `scripts/windows-use-task.ps1`. Do **not** improvise screenshot for「看进度/读文字」.
 - For GUI typing tasks, load `wechat-desktop-interaction` and call `scripts/desktop-interact.ps1`. The bridge must not choose coordinates; the main brain chooses the app/target profile.
 
 ## Multi-agent collaboration pattern (brain-only, single API)
@@ -183,11 +187,13 @@ If yes → **do not call more tools**. Reply:
 
 `操作未能完成，可能陷入重复尝试。请直接重发上一条消息（无需开新对话框）。`
 
-## Routing — brain-only, single DeepSeek API
+## Routing — Planner JSON + Specialist fallback
 
-**Every natural-language message:** load `weclaw-router` first → load one expert skill → then atomic skill / script below.
+**Default path:** WeClaw Planner (HTTP) classifies → direct script / step plan / gui / Specialist.
 
-WeClaw does **not** keyword-route; **only you** (DeepSeek) classify by meaning.
+When Specialist runs ( `[PLANNER:...]` prefix or planner parse failure ): load one expert skill → one bash when possible.
+
+**Never** leak to WeChat: English tool titles, `Loaded skill: …`, internal skill names.
 
 | User intent | Expert skill | Atomic skill / action |
 |-------------|--------------|------------------------|
