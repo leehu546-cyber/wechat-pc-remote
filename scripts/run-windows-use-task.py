@@ -16,14 +16,12 @@ def main() -> int:
     if not goal:
         goal = os.environ.get("WECLAW_GUI_TASK", "").strip()
     if not goal:
-        print("WECHAT_FAIL: missing GUI task goal")
-        print("WECHAT_USER_REPLY: 没做成：缺少桌面任务描述。")
+        print("WECHAT_FAIL: gui_goal_missing")
         return 1
 
     cfg = get_active_config()
     if not cfg or not cfg.get("api_key"):
-        print("WECHAT_FAIL: windows-use not configured")
-        print("WECHAT_USER_REPLY: 没做成：Windows-Use 未配置，请运行 setup-windows-use-deepseek.ps1")
+        print("WECHAT_FAIL: windows_use_not_configured")
         return 1
 
     llm = ChatDeepSeek(

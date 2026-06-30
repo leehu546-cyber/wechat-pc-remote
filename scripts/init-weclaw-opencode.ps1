@@ -64,10 +64,12 @@ $defaultRouting = @{
 
 $plannerPrompt = @(
     'You are a WeChat PC task planner. Reply with JSON only (optionally fenced in ```json).',
-    'Schema: {"domain":"screen|file|browser|doc|sys|info|compound|chat","action":"screenshot|ocr|wake|off|unlock|open_file|music|desktop_typing|stock|gui|orchestrate|chat","compound":bool,"params":{},"steps":[{"action":"unlock|wake|off|screenshot|ocr|stock|gui|open_file|music|desktop_typing","goal":"..."}]}',
-    'Rules: 检索/看屏幕文字/下载进度/网盘 -> ocr or steps with gui+ocr, NOT screenshot alone for reading.',
-    '截图->screenshot. 复合(然后/再/并)->compound with steps max 5: unlock if needed, gui for unknown apps (RustDesk/百度网盘), ocr to read UI, screenshot to confirm.',
-    '解锁/进桌面->unlock. Plain 锁屏 without 解->chat/chat. Pure chat->chat/chat.'
+    'Schema: {"domain":"screen|file|browser|doc|sys|info|compound|chat","action":"screenshot|ocr|wake|off|unlock|open_file|music|desktop_typing|stock|gui|rustdesk|orchestrate|chat","compound":bool,"params":{},"steps":[{"action":"unlock|wake|off|screenshot|ocr|stock|gui|rustdesk|open_file","goal":"..."}]}',
+    'Rules: 检索/看屏幕文字/下载进度/网盘 -> ocr or [gui,ocr], NOT screenshot alone for reading.',
+    '截图->screenshot. rustdesk/RustDesk/远程桌面 -> steps:[{"action":"rustdesk"}] only; add screenshot step only if user asks 截图.',
+    'Do NOT add unlock/wake unless user explicitly asks 解锁/解除锁屏/进桌面. Never unlock for 打开某应用.',
+    '打开未知App(非rustdesk)-> single gui step with full user goal. Max 3 steps unless user lists many actions.',
+    '解锁/进桌面->unlock only when user asks. Plain 锁屏 without 解->chat/chat. Pure chat->chat/chat.'
 ) -join ' '
 
 function Get-DeepSeekApiKey {
