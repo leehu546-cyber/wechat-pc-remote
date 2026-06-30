@@ -16,6 +16,8 @@
     { "name": "copy-to-desktop", "path": "scripts/copy-to-desktop.ps1", "triggers": ["放到桌面", "放桌面"], "category": "mechanical" },
     { "name": "desktop-interact", "path": "scripts/desktop-interact.ps1", "triggers": ["输入", "打字"], "category": "utility" },
     { "name": "windows-use-task", "path": "scripts/windows-use-task.ps1", "triggers": ["打开", "gui"], "category": "gui" },
-    { "name": "open-file-fast", "path": "scripts/open-file-fast.ps1", "triggers": ["打开文件"], "category": "mechanical" }
+    { "name": "open-file-fast", "path": "scripts/open-file-fast.ps1", "triggers": ["打开文件"], "category": "mechanical" },
+    { "name": "baidu-netdisk-transfer-status", "path": "scripts/baidu-netdisk-transfer-status.ps1", "triggers": ["网盘传输", "百度下载", "传输进度", "网盘下载", "有没有在下载"], "category": "mechanical", "notes": "沉淀 §83：打开百度网盘→传输页→OCR" },
+    { "name": "close-codex", "path": "scripts/close-codex.ps1", "triggers": ["关闭codex", "关闭cursor", "关闭编程", "关codex"], "category": "mechanical" }
   ]
 }

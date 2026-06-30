@@ -9,12 +9,16 @@ alwaysApply: true
 
 Phone WeChat controls this PC **reliably**. Intelligence comes from OpenCode + skills; **stability** comes from fixed PowerShell scripts executed by Go.
 
-## Two channels only
+## Multi-channel routing (§83)
 
 | Channel | When | Path |
 |---------|------|------|
-| **Scripts** | Atomic/mechanical: 截图、解锁、关屏、亮屏、RustDesk、OCR、股票、放桌面 | Planner JSON → Go runs `scripts/*.ps1` → `WECHAT_USER_REPLY` |
-| **OpenCode** | 日常闲聊、未覆盖、多步需理解、写代码/文档 | Planner `chat` or fallback → OpenCode Specialist + `.opencode/skills` |
+| **Scripts** | 截图、解锁、OCR、RustDesk 等原子操作 | Planner → Go 跑 `scripts/*.ps1` |
+| **Chat** | 闲聊、你好、在吗、纯问答 | Planner `chat` → **HTTP DeepSeek**（`agents.chat`，无工具） |
+| **Doc / 写字** | WPS/Word/输入/写一段话 | Planner `desktop_typing` → **OpenCode + `desktop-interact.ps1`**（禁止 GUI） |
+| **OpenCode** | 复合任务 fallback、file/browser | Planner → **OpenCode ACP**（任务工人） |
+| **ScriptSmith** | 做成固定脚本 / 沉淀 | Planner `script_forge` → scriptsmith |
+| **DesktopPilot (GUI)** | **仅**打开应用/文件夹/聚焦，**不写文字** | Planner `gui` → `windows-use-task.ps1` |
 
 ## Do NOT use (rejected §82)
 
