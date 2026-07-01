@@ -18,6 +18,7 @@
     { "name": "windows-use-task", "path": "scripts/windows-use-task.ps1", "triggers": ["打开", "gui"], "category": "gui" },
     { "name": "open-file-fast", "path": "scripts/open-file-fast.ps1", "triggers": ["打开文件"], "category": "mechanical" },
     { "name": "baidu-netdisk-transfer-status", "path": "scripts/baidu-netdisk-transfer-status.ps1", "triggers": ["网盘传输", "百度下载", "传输进度", "网盘下载", "有没有在下载"], "category": "mechanical", "notes": "沉淀 §83：打开百度网盘→传输页→OCR" },
-    { "name": "close-codex", "path": "scripts/close-codex.ps1", "triggers": ["关闭codex", "关闭cursor", "关闭编程", "关codex"], "category": "mechanical" }
+    { "name": "close-codex", "path": "scripts/close-codex.ps1", "triggers": ["关闭codex", "关闭cursor", "关闭编程", "关codex"], "category": "mechanical" },
+    { "name": "news-to-word", "path": "scripts/news-to-word.ps1", "triggers": ["新闻", "今日新闻", "写新闻", "新闻文件", "新闻word", "新闻word文档", "今天新闻", "新闻速览"], "category": "mechanical" }
   ]
 }
