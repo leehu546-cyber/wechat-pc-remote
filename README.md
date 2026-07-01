@@ -1,5 +1,8 @@
 # WeChat ClawBot Bridge
 
+> 个人 AI Coding 简历站已迁至：**https://leehu546-cyber.github.io/hu-zhi-resume-site/**  
+> 本仓库仅保留微信远程控制相关代码与文档。
+
 手机微信 → weclaw → **OpenCode ACP** → **DeepSeek 付费 API**（`deepseek/deepseek-v4-flash`）
 
 **架构说明：** [docs/架构说明.md](docs/架构说明.md)
