@@ -9,16 +9,17 @@ alwaysApply: true
 
 Phone WeChat controls this PC **reliably**. Intelligence comes from OpenCode + skills; **stability** comes from fixed PowerShell scripts executed by Go.
 
-## Multi-channel routing (§83)
+## Multi-channel routing (§84)
 
 | Channel | When | Path |
 |---------|------|------|
 | **Scripts** | 截图、解锁、OCR、RustDesk 等原子操作 | Planner → Go 跑 `scripts/*.ps1` |
 | **Chat** | 闲聊、你好、在吗、纯问答 | Planner `chat` → **HTTP DeepSeek**（`agents.chat`，无工具） |
-| **Doc / 写字** | WPS/Word/输入/写一段话 | Planner `desktop_typing` → **OpenCode + `desktop-interact.ps1`**（禁止 GUI） |
+| **Doc / 写字** | WPS/Word/输入/写一段话（非脚本） | Planner `desktop_typing` → **OpenCode + `desktop-interact.ps1`**（禁止 GUI） |
+| **ScriptRunner** | **用脚本 / 脚本方式 / 跑脚本**（一次性写+运行） | Planner `script_task` → **OpenCode `scriptrunner` + `wechat-script-runner`** |
+| **ScriptSmith** | **沉淀 / 做成固定脚本 / 注册** | Planner `script_forge` → scriptsmith |
 | **OpenCode** | 复合任务 fallback、file/browser | Planner → **OpenCode ACP**（任务工人） |
-| **ScriptSmith** | 做成固定脚本 / 沉淀 | Planner `script_forge` → scriptsmith |
-| **DesktopPilot (GUI)** | **仅**打开应用/文件夹/聚焦，**不写文字** | Planner `gui` → `windows-use-task.ps1` |
+| **DesktopPilot (GUI)** | **默认**打开应用/文件夹/聚焦，**不写文字** | Planner `gui` → `windows-use-task.ps1` |
 
 ## Do NOT use (rejected §82)
 

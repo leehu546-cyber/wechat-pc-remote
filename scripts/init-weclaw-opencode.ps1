@@ -41,6 +41,7 @@ $defaultRouting = @{
     chat_agent         = "chat"
     specialist_agent   = "opencode"
     script_forge_agent = "scriptsmith"
+    script_runner_agent = "scriptrunner"
 }
 
 $chatPrompt = @(
@@ -64,21 +65,30 @@ $scriptsmithPrompt = @(
     'You are ScriptSmith: write or fix scripts/*.ps1 for repeat WeChat PC tasks.',
     'Load wechat-scriptsmith. Output WECHAT_USER_REPLY when done.',
     'Register in config/script-manifest.json and run: python scripts/init-registry-db.py',
-    'Max 2 bash calls. No casual chat.'
+    'Max 2 bash calls. No casual chat. Only when user asks to沉淀/固定脚本.'
+) -join ' '
+
+$scriptRunnerPrompt = @(
+    'You are ScriptRunner: compose AND RUN one-off PowerShell scripts for WeChat PC tasks.',
+    'Load wechat-script-runner. Reuse manifest scripts when they fit; else write scripts/wechat-run-*.ps1.',
+    'Run with: powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/....',
+    'Output WECHAT_USER_REPLY from script stdout. Max 3 bash calls. No GUI/windows-use.',
+    'Do NOT register manifest unless user also asked to沉淀 (ScriptSmith handles that).'
 ) -join ' '
 
 $plannerPrompt = @(
     'You are a WeChat PC task planner. Reply with JSON only (optionally fenced in ```json).',
-    'Schema: {"domain":"screen|file|browser|doc|sys|info|compound|chat|forge","action":"screenshot|ocr|wake|off|unlock|open_file|music|desktop_typing|stock|gui|rustdesk|orchestrate|chat|script_forge|netdisk_transfer","compound":bool,"params":{},"steps":[{"action":"unlock|wake|off|screenshot|ocr|stock|gui|rustdesk|open_file|desktop_typing","goal":"..."}]}',
+    'Schema: {"domain":"screen|file|browser|doc|sys|info|compound|chat|forge|script","action":"screenshot|ocr|wake|off|unlock|open_file|music|desktop_typing|stock|gui|rustdesk|orchestrate|chat|script_forge|script_task|netdisk_transfer","compound":bool,"params":{},"steps":[{"action":"unlock|wake|off|screenshot|ocr|stock|gui|rustdesk|open_file|desktop_typing|script_task","goal":"..."}]}',
     'Rules: 检索/看屏幕文字/下载进度/网盘 -> ocr or [gui,ocr], NOT screenshot alone for reading.',
     '网盘传输/百度下载/有没有在下载 -> netdisk_transfer (fixed script baidu-netdisk-transfer-status.ps1).',
     '截图->screenshot. rustdesk -> steps:[{"action":"rustdesk"}] only.',
     'Do NOT add unlock/wake unless user explicitly asks 解锁/解除锁屏/进桌面.',
     'WRITE RULE: 写/输入/打字/一段话/WPS/Word正文 -> doc/desktop_typing or steps with desktop_typing + desktop-interact.ps1. NEVER gui/windows-use for writing.',
-    'GUI RULE: gui/windows-use ONLY for 打开应用/打开文件夹/聚焦窗口 with NO typing (e.g. 打开百度网盘, 打开文件夹).',
+    'GUI RULE: gui/windows-use ONLY for 打开应用/打开文件夹/聚焦窗口 with NO typing (e.g. 打开百度网盘, 打开文件夹). Default to gui for open/navigate unless user says 用脚本.',
+    'SCRIPT TASK: 用脚本/脚本方式/跑脚本/运行脚本 -> script_task/script_task (ScriptRunner: write+run ps1). NOT gui.',
+    'SCRIPT FORGE: 沉淀/做成固定脚本/注册脚本 -> script_forge/script_forge (ScriptSmith only).',
     '打开未知App(不写文字)-> single gui step. Max 3 steps unless user lists many actions.',
     'Pure chat/闲聊/你好/在吗-> chat/chat (HTTP DeepSeek, NOT OpenCode).',
-    '做成固定脚本/沉淀/写脚本-> script_forge/script_forge (ScriptSmith/Herm).',
     'Complex desktop -> orchestrate with gui/open_file/screenshot (max 3). Unhandled coding -> orchestrate or chat.'
 ) -join ' '
 
@@ -140,6 +150,7 @@ function Ensure-PlannerAgent {
         $Cfg.routing | Add-Member -NotePropertyName chat_agent -NotePropertyValue "chat" -Force
         $Cfg.routing | Add-Member -NotePropertyName specialist_agent -NotePropertyValue "opencode" -Force
         $Cfg.routing | Add-Member -NotePropertyName script_forge_agent -NotePropertyValue "scriptsmith" -Force
+        $Cfg.routing | Add-Member -NotePropertyName script_runner_agent -NotePropertyValue "scriptrunner" -Force
     }
 }
 
@@ -215,6 +226,17 @@ function Ensure-OpenCodeBrain {
     $Cfg.agents | Add-Member -NotePropertyName scriptsmith -NotePropertyValue ([pscustomobject]$scriptsmithCfg) -Force
     Write-Host "Configured agents.scriptsmith (ACP ScriptSmith; swap to Herm via script_forge_agent)" -ForegroundColor Green
 
+    $scriptrunnerCfg = [ordered]@{
+        type          = "acp"
+        command       = $OpenCodeCmd
+        args          = @("acp")
+        cwd           = $WorkDir
+        model         = $Model
+        system_prompt = $scriptRunnerPrompt
+    }
+    $Cfg.agents | Add-Member -NotePropertyName scriptrunner -NotePropertyValue ([pscustomobject]$scriptrunnerCfg) -Force
+    Write-Host "Configured agents.scriptrunner (ACP ScriptRunner: write+run ps1)" -ForegroundColor Green
+
     $Cfg.default_agent = "chat"
     if (-not $Cfg.routing) {
         $Cfg | Add-Member -NotePropertyName routing -NotePropertyValue ([pscustomobject]$defaultRouting)
@@ -235,6 +257,9 @@ function Ensure-OpenCodeBrain {
         }
         if (-not $Cfg.routing.script_forge_agent) {
             $Cfg.routing | Add-Member -NotePropertyName script_forge_agent -NotePropertyValue "scriptsmith" -Force
+        }
+        if (-not $Cfg.routing.script_runner_agent) {
+            $Cfg.routing | Add-Member -NotePropertyName script_runner_agent -NotePropertyValue "scriptrunner" -Force
         }
     }
 }
@@ -307,7 +332,7 @@ Write-Host "  task worker: opencode (orchestrate / [PLANNER:...] only)"
 Write-Host "  script_forge: $($cfg.routing.script_forge_agent)"
 Write-Host "  model: $model (paid DeepSeek via OpenCode auth for ACP agents)"
 Write-Host "  cwd: $workDir"
-Write-Host "  routing: planner -> scripts | gui | chat(HTTP) | script_forge | opencode"
+Write-Host "  routing: planner -> scripts | gui | chat(HTTP) | script_task | script_forge | opencode"
 Write-Host "  routing.chat_agent: $($cfg.routing.chat_agent)"
 Write-Host "  routing.specialist_agent: $($cfg.routing.specialist_agent)"
 Write-Host ""
